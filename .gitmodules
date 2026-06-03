@@ -1,0 +1,21 @@
+[submodule "campus-wall-alert-adapter"]
+	path = campus-wall-alert-adapter
+	url = https://github.com/campus-wall-team/campus-wall-alert-adapter.git
+[submodule "campus-wall-data-pipeline"]
+	path = campus-wall-data-pipeline
+	url = https://github.com/campus-wall-team/campus-wall-data-pipeline.git
+[submodule "campus-wall-frontend"]
+	path = campus-wall-frontend
+	url = https://github.com/campus-wall-team/campus-wall-frontend.git
+[submodule "campus-wall-graphrag"]
+	path = campus-wall-graphrag
+	url = https://github.com/campus-wall-team/campus-wall-graphrag.git
+[submodule "campus-wall-monitor-ui"]
+	path = campus-wall-monitor-ui
+	url = https://github.com/campus-wall-team/campus-wall-monitor-ui.git
+[submodule "campus-wall-ops"]
+	path = campus-wall-ops
+	url = https://github.com/campus-wall-team/campus-wall-ops.git
+[submodule "campus_wall"]
+	path = campus_wall
+	url = https://github.com/campus-wall-team/campus_wall.git

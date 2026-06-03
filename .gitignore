@@ -1,0 +1,51 @@
+# ========== Secrets / Environment ==========
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ========== Claude Code Local Config ==========
+.claude/settings.local.json
+
+# ========== IDE / Editor ==========
+.idea/
+.vscode/
+*.iws
+*.iml
+*.ipr
+.classpath
+.project
+.settings/
+
+# ========== OS ==========
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.~lock.*
+
+# ========== Logs ==========
+*.log
+logs/
+
+# ========== Build / Temp ==========
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ========== Python ==========
+__pycache__/
+*.py[cod]
+*.so
+venv/
+ENV/
+env/
+
+# ========== Node.js ==========
+node_modules/
+dist/
+
+# ========== WeChat Mini Program ==========
+project.private.config.json
