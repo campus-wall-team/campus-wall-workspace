@@ -1,0 +1,31 @@
+# ============================================================
+# 【服务器管理员可选】把 GraphRAG 设为开机自启的 systemd 服务
+#
+# 中间件容器已是 restart=unless-stopped 会自动拉起；GraphRAG 目前是 host 直跑，
+# 装上本服务后它也能开机自启、崩溃自动重启。
+#
+# 安装：
+#   sudo cp deploy/server/campus-graphrag.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now campus-graphrag
+# 查看：
+#   systemctl status campus-graphrag
+#   journalctl -u campus-graphrag -f
+#
+# 前提：已 cp demo/.env.example demo/.env 并填好 NEO4J_PASSWORD。
+# ============================================================
+[Unit]
+Description=Campus Wall GraphRAG service (AI 学长问答引擎)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=nvidia
+WorkingDirectory=/home/nvidia/Desktop/campus-wall
+ExecStart=/usr/bin/env bash /home/nvidia/Desktop/campus-wall/demo/run-graphrag.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

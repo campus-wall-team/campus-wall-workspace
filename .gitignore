@@ -3,6 +3,8 @@
 .env.local
 .env.*.local
 !.env.example
+# 管理员用 export-team-env.sh 生成的、含真实密钥的团队配置，绝不提交
+/deploy/team-dev/backend.env
 
 # ========== Claude Code Local Config ==========
 .claude/settings.local.json
