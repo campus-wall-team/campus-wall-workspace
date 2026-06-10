@@ -28,7 +28,9 @@ H=$(curl -s --noproxy '*' --max-time 5 "http://$SERVER:8001/health" 2>/dev/null)
 
 echo ""
 if [ "$bad" -eq 0 ]; then
-  echo "✅ 全部可达，可以开始后端开发。下一步：把 backend.env.example 配到 campus_wall/.env 并启动后端。"
+  echo "✅ 全部可达，可以开始后端开发。下一步：把管理员发的 application-local.yaml 放到 campus_wall/"
+  echo "   （或 cp campus_wall/application-local.yaml.example campus_wall/application-local.yaml 自己填），"
+  echo "   再在 campus_wall/ 目录启动：java -jar target/*.jar --spring.profiles.active=dev"
 else
   echo "⚠️  有 $bad 项不可达，依次排查："
   echo "    1) 你和服务器是否在同一局域网（$SERVER 同网段）？"
