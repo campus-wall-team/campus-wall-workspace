@@ -70,7 +70,7 @@ Campus Wall（校园墙）是一个面向高校学生的**匿名社交与信息�
         ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                          基础设施 / 数据层                        │
-│  MySQL 8 · Redis 7 · MinIO · Neo4j 5 · Chroma                    │
+│  MySQL 8 · Redis 7 · MinIO · Neo4j 5                             │
 └─────────────────────────────────────────────────────────────────┘
                               │ 指标采集
 ┌─────────────────────────────────────────────────────────────────┐
@@ -87,7 +87,7 @@ Campus Wall（校园墙）是一个面向高校学生的**匿名社交与信息�
   - Spring Boot 后端 `:8080`（生产用 systemd `campus-wall.service` 托管）
   - Ollama `:11434`（本地 LLM `qwen2.5:7b` + 嵌入 `bge-m3`）
   - GraphRAG demo（`demo/run-graphrag.sh` → `:8001`，本地直跑，见 §6）
-- **Docker Compose 编排**（`campus-wall-ops`）：MySQL、Redis、MinIO、Neo4j、Chroma、Prometheus、Grafana、Alertmanager、各 exporter、alert-adapter、monitor-ui(nginx)。
+- **Docker Compose 编排**（`campus-wall-ops`）：MySQL、Redis、MinIO、Neo4j、Prometheus、Grafana、Alertmanager、各 exporter、alert-adapter、monitor-ui(nginx)。
 - 容器访问宿主机服务统一用 `host.docker.internal`（如 nginx 代理 `/api` → `host.docker.internal:8080`，graphrag 连 Ollama）。
 - 为避开宿主机已占用端口，Neo4j 对外映射为 **7475(HTTP) / 7688(Bolt)**（容器内仍是 7474/7687）。
 
@@ -134,7 +134,7 @@ Grafana 读 Prometheus → 看板（经 nginx /grafana 内嵌到管理后台）
 | `campus-wall-data-pipeline` | Python 3.x | PyMySQL 1.1.1 · requests 2.32 | ETL：抽取·清洗·脱敏·入库 |
 | `campus-wall-monitor-ui` | Vue 3.5.10 · JS | Element Plus 2.8.4 · Vue Router 4.4 · Pinia 2.2 · Axios 1.7 · Vite 5.4 | 运营管理后台 |
 | `campus-wall-alert-adapter` | Python 3.12 · FastAPI 0.115 | uvicorn 0.34 · httpx 0.28 | 告警转发（企微/钉钉） |
-| `campus-wall-ops` | Docker Compose | MySQL 8.0 · Redis 7.0 · Neo4j 5 · Chroma 0.5.4 · Prometheus v2.54 · Grafana 11.2 · Alertmanager v0.27 · Nginx 1.27 | 编排与监控基建 |
+| `campus-wall-ops` | Docker Compose | MySQL 8.0 · Redis 7.0 · Neo4j 5 · Prometheus v2.54 · Grafana 11.2 · Alertmanager v0.27 · Nginx 1.27 | 编排与监控基建 |
 
 ---
 
@@ -223,9 +223,9 @@ Vue 3.5 + Element Plus 桌面 SPA，3 个页面：`Login`（拿 JWT）、`Overvi
 
 Docker Compose 统一编排所有基础设施与监控栈。
 
-- **主编排** `docker-compose.yml`：数据层（mysql/redis/minio/chroma/neo4j）、应用层（graphrag）、监控采集（prometheus/node-exporter/redis-exporter/mysqld-exporter/blackbox-exporter）、可视化告警（grafana/alertmanager/alert-adapter）、展示层（monitor-ui nginx）。
-- **资源限制覆盖** `docker-compose.override.yml`：按 4 核 8G 服务器分配（总约 5.5GB），如 neo4j 1.5g、mysql 1g、chroma/graphrag/prometheus 各 512m。`docker-compose.demo.yml` 为 demo 精简版。
-- **监控配置** `monitoring/`：Prometheus 抓取（15s，含 `host.docker.internal:8080` 的 Spring Boot `/actuator/prometheus`、blackbox 探针 MinIO/Chroma/GraphRAG/Neo4j）；Grafana 数据源 + 3 个预置看板（business / host-system / jvm-app）；Alertmanager 路由到 `alert-adapter:9094`；8 条告警规则（ServiceDown、BlackboxProbeFailed、Host CPU/内存/磁盘、JvmHeapHigh、HttpServerErrorRateHigh、ModerationBacklog）。
+- **主编排** `docker-compose.yml`：数据层（mysql/redis/minio/neo4j）、应用层（graphrag）、监控采集（prometheus/node-exporter/redis-exporter/mysqld-exporter/blackbox-exporter）、可视化告警（grafana/alertmanager/alert-adapter）、展示层（monitor-ui nginx）。
+- **资源限制覆盖** `docker-compose.override.yml`：按 4 核 8G 服务器分配（总约 5.5GB），如 neo4j 1.5g、mysql 1g、graphrag/prometheus 各 512m。`docker-compose.demo.yml` 为 demo 精简版。
+- **监控配置** `monitoring/`：Prometheus 抓取（15s，含 `host.docker.internal:8080` 的 Spring Boot `/actuator/prometheus`、blackbox 探针 MinIO/GraphRAG/Neo4j）；Grafana 数据源 + 3 个预置看板（business / host-system / jvm-app）；Alertmanager 路由到 `alert-adapter:9094`；8 条告警规则（ServiceDown、BlackboxProbeFailed、Host CPU/内存/磁盘、JvmHeapHigh、HttpServerErrorRateHigh、ModerationBacklog）。
 - **nginx** `monitoring/nginx/monitor-ui.conf`：`/` SPA、`/api/` → `host.docker.internal:8080`、`/grafana/` → `campus-grafana:3000`（支持 WebSocket）。
 - **部署** `deploy/campus-wall.service`：systemd 托管宿主机 Spring Boot jar（`-Xms1g -Xmx1.5g`，失败自动重启）。
 - `graphrag-service/`、`alert-adapter/` 子目录含各自 Dockerfile（构建上下文）。
@@ -240,7 +240,6 @@ Docker Compose 统一编排所有基础设施与监控栈。
 | **Redis 7.0** (`campus-redis`) | 多级缓存、点赞/收藏/搜索/时间线、会话 | 6379 |
 | **MinIO** (`campus-minio`) | 对象存储（帖子图、头像、聊天文件，bucket `campus-wall`） | 9000(API) / 9001(Console) |
 | **Neo4j 5** (`campus-neo4j`) | GraphRAG 知识图谱 + 原生向量索引（cosine, 1024 维） | 7475(HTTP) / 7688(Bolt) |
-| **Chroma 0.5.4** (`campus-ai-db`) | 向量库（RAG 备份路线，保留） | 8000 |
 
 **MySQL 主要表（约 19 张）**：`region` `university` `user` `post` `comment` `user_interaction` `user_follow` `topic` `notification` `browse_history` `search_record` `chat_session` `chat_message` `message` `ai_chat_record` `ai_preference` `moderation_log` `feedback` `user_like` `custom_emoji`。
 
@@ -320,7 +319,7 @@ exporters / actuator ──► Prometheus（抓取 15s，留存 15d）
             （经 nginx /grafana 内嵌）   alert-adapter :9094 ──► 企业微信 / 钉钉
 ```
 
-- **抓取目标**：node/mysqld/redis exporter、cadvisor（容器，yml 中可选）、Spring Boot `/actuator/prometheus`、blackbox 探针（MinIO/Chroma/GraphRAG/Neo4j 健康）。
+- **抓取目标**：node/mysqld/redis exporter、cadvisor（容器，yml 中可选）、Spring Boot `/actuator/prometheus`、blackbox 探针（MinIO/GraphRAG/Neo4j 健康）。
 - **告警规则（8 条）**：`ServiceDown`(up==0, critical)、`BlackboxProbeFailed`(critical)、`HostHighMemory/Disk/CPU`(>90%/85%/90%, warning)、`JvmHeapHigh`(>90%)、`HttpServerErrorRateHigh`(5xx>5%)、`ModerationBacklog`(待审>50, 10m)。
 - **Alertmanager**：分组键 `[alertname, job]`，去重 5m、分组等待 30s、重复 4h；critical 抑制同源 warning；接收器 `campus-webhook` → `alert-adapter:9094/alert`。
 - **可视化入口**：管理后台（8090）内嵌 Grafana 看板；Grafana 开启匿名只读 + 允许嵌入，root URL 子路径 `/grafana/`。
@@ -339,7 +338,6 @@ exporters / actuator ──► Prometheus（抓取 15s，留存 15d）
 | **6379** | Redis 7.0 | 容器 | 缓存 |
 | **9000 / 9001** | MinIO | 容器 | 对象存储 API / Console |
 | **7475 / 7688** | Neo4j 5 | 容器 | HTTP Browser / Bolt（`bolt://localhost:7688`） |
-| **8000** | Chroma | 容器 | 向量库（备份路线） |
 | **3000** | Grafana | 容器 | 看板（内部，经 nginx 内嵌） |
 | **9090** | Prometheus | 容器 | 指标 UI |
 | **9093** | Alertmanager | 容器 | 告警 UI |

@@ -125,7 +125,7 @@
 │
 └── 运维基础设施
     └── campus-wall-ops  [Docker Compose]
-        ├── 数据层：MySQL, Redis, MinIO, Neo4j, Chroma
+        ├── 数据层：MySQL, Redis, MinIO, Neo4j
         ├── 监控层：Prometheus + Grafana + Alertmanager
         └── 代理层：Nginx
 ```

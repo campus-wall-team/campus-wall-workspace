@@ -1613,7 +1613,6 @@ git push -u origin feature/post-pin-ui
 | MinIO Console | 9001 | campus-wall-ops |
 | Neo4j HTTP | 7475 | campus-wall-ops |
 | Neo4j Bolt | 7688 | campus-wall-ops |
-| Chroma | 8000 | campus-wall-ops |
 | Prometheus | 9090 | campus-wall-ops |
 | Grafana | 3000 | campus-wall-ops |
 | Alertmanager | 9093 | campus-wall-ops |
