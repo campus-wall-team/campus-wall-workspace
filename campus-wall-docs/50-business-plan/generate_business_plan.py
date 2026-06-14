@@ -403,7 +403,7 @@ def create_tech_barrier(doc):
         ('AI引擎', 'campus-wall-graphrag', 'Python + FastAPI + Neo4j', '知识图谱构建、AI问答、向量检索'),
         ('数据处理', 'campus-wall-data-pipeline', 'Python ETL', '数据提取、清洗、脱敏、推送至知识库'),
         ('数据存储', 'MySQL + Redis + MinIO', 'MySQL 8.0 + Redis 7.0', '业务数据、缓存、图片存储'),
-        ('知识存储', 'Neo4j + Chroma', 'Neo4j 5 + Chroma 0.5', '知识图谱、向量备份'),
+        ('知识存储', 'Neo4j', 'Neo4j 5', '知识图谱 + 原生向量索引'),
         ('监控告警', 'Prometheus + Grafana', 'Prometheus 2.54 + Grafana 11.2', '全链路监控、可视化、告警通知'),
     ]
 

@@ -112,7 +112,7 @@ cd campus_wall
 |--------|--------|------|
 | `campus_wall` | Java 17, Spring Boot 3, MyBatis-Plus, MySQL, Redis | 核心业务后端：用户认证、帖子、评论、私信、AI聊天、内容审核 |
 | `campus-wall-frontend` | uni-app, Vue3, TypeScript | 微信小程序用户端 |
-| `campus-wall-graphrag` | Python, FastAPI, Chroma, LangChain | AI 问答代理，基于 GraphRAG 实现知识库问答 |
+| `campus-wall-graphrag` | Python, FastAPI, Neo4j | AI 问答代理，基于 GraphRAG 实现知识库问答 |
 | `campus-wall-data-pipeline` | Python | 数据采集、清洗、脱敏、结构化入库 |
 | `campus-wall-alert-adapter` | Python, Flask | 告警通知适配，对接企业微信机器人 |
 | `campus-wall-monitor-ui` | Vue3, Element Plus | 运营监控管理后台 |
