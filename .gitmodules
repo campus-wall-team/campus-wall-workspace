@@ -19,3 +19,6 @@
 [submodule "campus_wall"]
 	path = campus_wall
 	url = https://github.com/campus-wall-team/campus_wall.git
+[submodule "campus-wall-ai"]
+	path = campus-wall-ai
+	url = https://github.com/campus-wall-team/campus-wall-ai.git
