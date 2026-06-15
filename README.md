@@ -25,10 +25,11 @@
 +-----------------------------+-------------------------------+
 |        业务服务层            |         AI / 数据层            |
 |  campus_wall (Java 后端)    |  campus-wall-graphrag (RAG)   |
-|  用户 · 帖子 · 私信 · 审核   |  知识库 · LLM 问答代理         |
+|  用户 · 帖子 · 私信 · 审核   |  知识库 · LLM 问答 + 帖子匹配  |
+|  · AI 学长 agent · RBAC     |                               |
 +-----------------------------+-------------------------------+
 |  campus-wall-data-pipeline  |  campus-wall-alert-adapter    |
-|  数据清洗 · 脱敏 · 入库      |  告警推送 · 企业微信机器人      |
+|  导出 · 清洗 · 脱敏 · 入库   |  告警推送 · 企微/钉钉机器人     |
 +-----------------------------+-------------------------------+
                               |
 +-------------------------------------------------------------+
@@ -50,13 +51,13 @@ campus-wall-workspace/
 │   └── 企业微信机器人推送
 │
 ├── campus-wall-data-pipeline/     # 数据管道（Python）
-│   └── 爬虫 · 清洗 · 脱敏 · 入库
+│   └── 导出 · 清洗 · 脱敏 · 入库（本机导出，非爬虫）
 │
 ├── campus-wall-frontend/          # 微信小程序前端（uni-app + Vue3 + TS）
 │   └── 用户端小程序
 │
 ├── campus-wall-graphrag/          # 智能问答服务（Python + FastAPI）
-│   └── GraphRAG · 阿里云百炼 LLM
+│   └── GraphRAG · 本地 Ollama 优先(qwen2.5:7b/bge-m3/qwen2.5vl) + 云端 DashScope 降级
 │
 ├── campus-wall-monitor-ui/        # 监控管理后台（Vue3）
 │   └── 运营人员管理界面
@@ -110,11 +111,11 @@ cd campus_wall
 
 | 子项目 | 技术栈 | 职责 |
 |--------|--------|------|
-| `campus_wall` | Java 17, Spring Boot 3, MyBatis-Plus, MySQL, Redis | 核心业务后端：用户认证、帖子、评论、私信、AI聊天、内容审核 |
+| `campus_wall` | Java 17, Spring Boot 3.4.2, MyBatis-Plus, MySQL, Redis | 核心业务后端：用户认证、帖子、评论、私信、AI 学长 agent、管理端 RBAC + 运营看板、板块分类、排行榜、学生认证、内容审核 |
 | `campus-wall-frontend` | uni-app, Vue3, TypeScript | 微信小程序用户端 |
-| `campus-wall-graphrag` | Python, FastAPI, Neo4j | AI 问答代理，基于 GraphRAG 实现知识库问答 |
-| `campus-wall-data-pipeline` | Python | 数据采集、清洗、脱敏、结构化入库 |
-| `campus-wall-alert-adapter` | Python, Flask | 告警通知适配，对接企业微信机器人 |
+| `campus-wall-graphrag` | Python, FastAPI, Neo4j | AI 问答引擎，基于 GraphRAG 实现知识库问答与帖子匹配 |
+| `campus-wall-data-pipeline` | Python | 导出·清洗·脱敏·结构化入库（本机导出，非爬虫） |
+| `campus-wall-alert-adapter` | Python 3.12, FastAPI | 告警通知适配，对接企业微信/钉钉机器人 |
 | `campus-wall-monitor-ui` | Vue3, Element Plus | 运营监控管理后台 |
 | `campus-wall-ops` | Docker, Docker Compose, Nginx, Prometheus, Grafana | 生产环境部署编排与监控基础设施 |
 

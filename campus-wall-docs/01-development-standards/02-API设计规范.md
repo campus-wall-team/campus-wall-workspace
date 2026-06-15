@@ -178,23 +178,35 @@ Authorization: Bearer <token>
 | GET | `/follows` | 关注列表 | 是 |
 | POST | `/follow/{id}` | 关注/取消关注 | 是 |
 
-### AI 相关 (/api/v1/ai)
+### AI 相关 (/api/v1/ai-senior · /api/v1/ai-preference)
+
+AI 问答已收口为**单一 agent 入口**（轻量 Planner-Executor，内部编排意图识别 / 检索工具 / 反幻觉判定 / 接地合成），前端不再分散调用多个对话端点；对话历史与知识库挂在 `/ai-senior/*`，AI 偏好挂在 `/ai-preference/*`。
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|------|
-| POST | `/chat` | AI 对话 | 是 |
-| GET | `/history` | 对话历史 | 是 |
-| GET | `/preference` | AI 偏好设置 | 是 |
-| PUT | `/preference` | 更新偏好 | 是 |
+| POST | `/ai-senior/agent` | AI 对话（唯一入口，返回 answer + 匹配帖子卡片 + plan 调试 + conversationId）| 是 |
+| GET | `/ai-senior/history/list` | 对话历史列表 | 是 |
+| GET | `/ai-senior/history/detail` | 对话历史详情 | 是 |
+| GET | `/ai-preference/get` | AI 偏好设置 | 是 |
+| POST | `/ai-preference/save` | 更新偏好 | 是 |
+| GET | `/ai-preference/system-prompt` | 个性化系统提示词 | 是 |
+
+> ⚠️ 旧端点 `/api/v1/ai/chat`、`/ai-senior/chat`、`/chat/stream` 及后端侧 `/match-posts` 已下线。`userId` 由 JWT（`@RequestAttribute("userId")`）注入，不再从请求体读取。
 
 ### 管理后台 (/api/v1/admin)
 
-| 方法 | 路径 | 说明 | 认证 |
+> 管理端为**独立 admin_user RBAC 体系**（与 C 端 user 物理隔离，独立 admin token），鉴权走 `AdminAuthInterceptor` + 方法级 `@RequirePermission(权限码)`；下表"认证"列标注所需权限码而非笼统的"管理员"。
+
+| 方法 | 路径 | 说明 | 认证（权限码）|
 |------|------|------|------|
-| GET | `/moderation/pending` | 待审核列表 | 是(管理员) |
-| POST | `/moderation/{id}/approve` | 审核通过 | 是(管理员) |
-| POST | `/moderation/{id}/reject` | 审核拒绝 | 是(管理员) |
-| GET | `/stats/overview` | 数据概览 | 是(管理员) |
+| POST | `/admin/login` | 管理员登录（签发 admin token）| 否 |
+| GET | `/admin/auth/me` | 当前管理员信息与权限 | admin token |
+| GET | `/admin/moderation/queue` | 待审核列表 | `moderation:queue` |
+| POST | `/admin/moderation/{id}/approve` | 审核通过 | `moderation:queue` |
+| POST | `/admin/moderation/{id}/reject` | 审核拒绝 | `moderation:queue` |
+| GET | `/admin/stats` | 瞬时数据卡片 | `stat:view` |
+| GET | `/admin/stat/overview` | 运营看板概览 | `stat:view` |
+| GET | `/admin/audit` | 操作审计日志 | `audit:view` |
 
 ## 错误码规范
 

@@ -95,17 +95,20 @@
 │
 ├── 管理后台 (Web)
 │   └── campus-wall-monitor-ui  [Vue 3 + Element Plus]
-│       ├── 数据概览
-│       └── 内容审核
+│       ├── 运营看板（Dashboard）
+│       ├── 系统监控（数据概览）
+│       ├── 内容审核 / 举报 / 反馈 / 学生认证
+│       ├── 用户管理
+│       └── 权限/角色管理（RBAC）、审计日志、系统配置
 │
 ├── 主后端服务
-│   └── campus_wall  [Java 17 + Spring Boot 3]
+│   └── campus_wall  [Java 17 + Spring Boot 3.4.2]
 │       ├── 用户认证（微信OAuth2 + JWT）
-│       ├── 社区（帖子/评论/搜索）
-│       ├── AI代理（转发GraphRAG）
+│       ├── 社区（帖子/评论/搜索/板块/排行榜/学生认证）
+│       ├── AI 学长 agent（Planner-Executor + 反幻觉，单一 /agent 入口）
 │       ├── 私信（WebSocket）
 │       ├── 内容审核（敏感词+AI复审）
-│       └── 管理API
+│       └── 管理端 RBAC + 运营看板 API
 │
 ├── AI 知识图谱服务
 │   └── campus-wall-graphrag  [Python + FastAPI + Neo4j]
@@ -136,7 +139,8 @@
 
 | 层级 | 技术 | 版本 |
 |------|------|------|
-| 后端 | Java + Spring Boot | 17 + 3.3.7 |
+| 后端 | Java + Spring Boot | 17 + 3.4.2 |
+| 后端 AI | Spring AI | 1.0.8 |
 | 前端 | Vue 3 + uni-app | 3.4 + 3.0 |
 | 管理后台 | Vue 3 + Element Plus | 3.5 + 2.8 |
 | AI服务 | Python + FastAPI + Neo4j | 3.12 + 0.115 + 5 |
@@ -155,4 +159,4 @@
 
 ---
 
-*本文档体系最后更新：2026-06-10*
+*本文档体系最后更新：2026-06-15*

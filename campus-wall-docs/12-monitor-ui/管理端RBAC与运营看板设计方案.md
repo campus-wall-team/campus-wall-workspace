@@ -309,6 +309,7 @@ ALTER TABLE user
 
 - **`MetricsCollector` 现有 6 Gauge + 1 Counter 不动**，继续服务 Grafana + 那 1 条 `ModerationBacklog` 业务告警；运营看板与之双轨并行。
 - **修掉已埋坑**：`campus-wall-monitor-ui/src/config.js` 里 Grafana UID 仍是占位符 `campus-overview`，实际 provisioning UID 是 `campus-business`/`host-system`/`jvm-*`。打通后替换，否则 Overview iframe 全白；确认 `GF_AUTH_ANONYMOUS_ENABLED` + `GF_SECURITY_ALLOW_EMBEDDING` 已开、经 nginx `/grafana` 同源反代。
+  > 注记（实现阶段更新）：config.js 的 Grafana UID 已替换为真实值 `campus-business` / `host-system` / `jvm-app`（整页 kiosk 内嵌），本节所述「占位 `campus-overview` 待替换」仅为设计时状态。
 - **告警 vs 看板职责分离**：系统类告警（`ServiceDown`/`Host*`/`JvmHeap`/`Http5xx`）+ `ModerationBacklog>50` 留 Prometheus/Alertmanager → alert-adapter 转企微/钉钉；运营趋势**不配机器告警**（噪音大、阈值难定，靠人看周报）。
 - 可选（非必做）：管理端登录失败暴增 / 审计写失败可接入现有告警链。
 
@@ -416,7 +417,7 @@ src/
 9. **前端 token 四处散读 / `Moderation.vue` 字段兼容垫片** → 收敛 `useUserStore`，后端 `Result.data` 固定 camelCase。
 10. **`v-permission` 当鉴权** → 后端每个写接口独立 `@RequirePermission` 兜底。
 11. **快照任务复用错文件** → `RedisLockUtil` 先例在 `MetricsCollector`/`FileCleanupTask`，**非 `RankRefreshTask`**（其 00:05 cron 无锁），`StatSnapshotTask` 须自己加锁。
-12. **Grafana 占位 UID** → P3 替换真实 UID（`campus-business`/`host-system`/`jvm-*`），否则 Overview iframe 全白。
+12. **Grafana 占位 UID** → P3 替换真实 UID（`campus-business`/`host-system`/`jvm-*`），否则 Overview iframe 全白。（注记：实现阶段已替换为真实值 `campus-business`/`host-system`/`jvm-app` 整页 kiosk，「占位待替换」仅为设计时状态。）
 13. **vue-echarts 内存泄漏** → 统一 `BaseChart.vue` 封装 + `autoresize`，不各页手写 init/resize。
 
 **明确不做（过度工程，统一范围护栏）：**
