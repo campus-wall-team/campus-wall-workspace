@@ -244,7 +244,7 @@ Vue 3.5 + Element Plus 桌面 SPA，**约 12 个权限驱动菜单页 + 403**：
 
 Docker Compose 统一编排所有基础设施与监控栈。
 
-- **主编排** `docker-compose.yml`：数据层（mysql/redis/minio/neo4j）、应用层（campus-wall-ai api + 记忆 worker，`network_mode: host`）、监控采集（prometheus/node-exporter/redis-exporter/mysqld-exporter/blackbox-exporter）、可视化告警（grafana/alertmanager/alert-adapter）、展示层（monitor-ui nginx）。**14 个活跃服务**（cadvisor 整段注释，国内拉取失败）。
+- **主编排** `docker-compose.yml`：数据层（mysql/redis/minio/neo4j）、应用层（campus-wall-ai api + 记忆 worker，`network_mode: host`）、监控采集（prometheus/node-exporter/redis-exporter/mysqld-exporter/blackbox-exporter）、可视化告警（grafana/alertmanager/alert-adapter）、展示层（monitor-ui nginx）。**15 个活跃服务**（cadvisor 整段注释，国内拉取失败）。
 - campus-wall-ai 服务：`build.context = ../campus-wall-ai`（含 Dockerfile + app 代码）、`image: campus-wall-ai:2.0.0`、`network_mode: host`（host 网络下用 localhost 直达 Ollama/后端、局域网直连内网 LLM），端口由 `AI_SERVICE_PORT` 决定（默认 **8011**），env 含 `NEO4J_URI=bolt://localhost:7688`、`BACKEND_BASE_URL=http://localhost:8080`、VLM_*、POST_VECTOR_INDEX_NAME，CHAT 走内网 Qwen3.6-35B（172.21.160.101:8003）；另起同镜像 `campus-wall-ai-worker` 进程消费 Redis Streams 做异步记忆。`env_file = ./ai-service/.env`（该目录仅存部署侧 `.env`，密钥不入库）。
 - **资源限制覆盖** `docker-compose.override.yml`：按 4 核 8G 服务器分配（总约 5.5GB），如 neo4j 1.5g、mysql 1g、campus-wall-ai/prometheus 各 512m。`docker-compose.demo.yml` 为 demo 精简版。
 - **监控配置** `monitoring/`：Prometheus 抓取（15s，含 `host.docker.internal:8080` 的 Spring Boot `/actuator/prometheus`、blackbox 探针 MinIO/campus-wall-ai/Neo4j）；Grafana 数据源 + 3 个预置看板（business / host-system / jvm-app）；Alertmanager 单 route → `campus-webhook`（`alert-adapter:9094`）；8 条告警规则（ServiceDown、BlackboxProbeFailed、Host CPU/内存/磁盘、JvmHeapHigh、HttpServerErrorRateHigh[severity=**warning**]、ModerationBacklog[指标 `campus_moderation_pending`]）。
