@@ -9,7 +9,7 @@
 整条链路在小程序里的入口是「AI 学长」：
 
 ```
-小程序 → 后端 POST /api/v1/ai-senior/chat → campus-wall-ai :8011 /query
+小程序 → 后端 POST /api/v1/ai-senior/agent → campus-wall-ai :8011 /query
        → bge-m3 向量化问题 → Neo4j 向量检索 Top-K → 图遍历补充事实
        → qwen2.5 生成答案 → 回传（带来源引用）
 ```
@@ -73,6 +73,6 @@ curl --noproxy '*' -X POST http://localhost:8011/query \
 
 - **加知识**：往 `seed-knowledge.json` 的 `documents` 里追加 `{title, source, content}`（`source` 用新的 `seed:xxx`），再跑 `python3 demo/seed.py`。同 `source` 会幂等覆盖。
 - **换模型**：在 `demo/.env` 里覆盖 `CHAT_MODEL` / `EMBED_MODEL`（或指向云端 DashScope 的 `CHAT_BASE_URL` / `CHAT_API_KEY`）。
-- **接全栈**：后端 `application-dev.yaml` 的 `GRAPHRAG_BASE_URL` 默认指向 `http://localhost:8011`，启动 Spring Boot 后即可通过 `/api/v1/ai-senior/chat` 走完整链路。
+- **接全栈**：后端 `application-dev.yaml` 的 `GRAPHRAG_BASE_URL` 默认指向 `http://localhost:8011`，启动 Spring Boot 后即可通过 `/api/v1/ai-senior/agent` 走完整链路。
 
 更完整的架构、端口、部署说明见根目录 [`PROJECT.md`](../PROJECT.md)；模块完成度与路线图见 [`campus-wall-docs/00-project-overview/05-项目进度.md`](../campus-wall-docs/00-project-overview/05-项目进度.md)。

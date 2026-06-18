@@ -24,11 +24,11 @@
                               |
 +-----------------------------+-------------------------------+
 |        业务服务层            |         AI / 数据层            |
-|  campus_wall (Java 后端)    |  campus-wall-graphrag (RAG)   |
+|  campus_wall (Java 后端)    |  campus-wall-ai (RAG)         |
 |  用户 · 帖子 · 私信 · 审核   |  知识库 · LLM 问答 + 帖子匹配  |
 |  · AI 学长 agent · RBAC     |                               |
 +-----------------------------+-------------------------------+
-|  campus-wall-data-pipeline  |  campus-wall-alert-adapter    |
+|  campus-wall-data-pipeline  |  alert-adapter（并入 ops）     |
 |  导出 · 清洗 · 脱敏 · 入库   |  告警推送 · 企微/钉钉机器人     |
 +-----------------------------+-------------------------------+
                               |
@@ -47,23 +47,20 @@
 campus-wall-workspace/
 ├── campus-wall-docs/              # 项目文档中心（见下方说明）
 │
-├── campus-wall-alert-adapter/     # 告警适配器（Python）
-│   └── 企业微信机器人推送
-│
 ├── campus-wall-data-pipeline/     # 数据管道（Python）
 │   └── 导出 · 清洗 · 脱敏 · 入库（本机导出，非爬虫）
 │
 ├── campus-wall-frontend/          # 微信小程序前端（uni-app + Vue3 + TS）
 │   └── 用户端小程序
 │
-├── campus-wall-graphrag/          # 智能问答服务（Python + FastAPI）
-│   └── GraphRAG · 本地 Ollama 优先(qwen2.5:7b/bge-m3/qwen2.5vl) + 云端 DashScope 降级
+├── campus-wall-ai/                # AI 微服务 v2（Python + FastAPI + LangGraph）
+│   └── 已吸收原 graphrag；QA agent · AI 发帖 · SSE 流式 · 异步记忆，监听 :8011
 │
 ├── campus-wall-monitor-ui/        # 监控管理后台（Vue3）
 │   └── 运营人员管理界面
 │
 ├── campus-wall-ops/               # 运维部署（Docker Compose）
-│   └── Nginx · Prometheus · Grafana · Alertmanager
+│   └── Nginx · Prometheus · Grafana · Alertmanager · alert-adapter（告警转发，原独立子模块已并入）
 │
 ├── campus_wall/                   # 主后端服务（Java + Spring Boot）
 │   └── 用户 · 帖子 · 评论 · 私信 · AI聊天 · 审核
@@ -113,11 +110,10 @@ cd campus_wall
 |--------|--------|------|
 | `campus_wall` | Java 17, Spring Boot 3.4.2, MyBatis-Plus, MySQL, Redis | 核心业务后端：用户认证、帖子、评论、私信、AI 学长 agent、管理端 RBAC + 运营看板、板块分类、排行榜、学生认证、内容审核 |
 | `campus-wall-frontend` | uni-app, Vue3, TypeScript | 微信小程序用户端 |
-| `campus-wall-graphrag` | Python, FastAPI, Neo4j | AI 问答引擎，基于 GraphRAG 实现知识库问答与帖子匹配 |
+| `campus-wall-ai` | Python, FastAPI, LangGraph, Neo4j | AI 微服务 v2（已吸收原 graphrag）：LangGraph QA agent · AI 发帖 · GraphRAG 知识问答/帖子匹配 · SSE 流式 · 异步记忆，监听 :8011 |
 | `campus-wall-data-pipeline` | Python | 导出·清洗·脱敏·结构化入库（本机导出，非爬虫） |
-| `campus-wall-alert-adapter` | Python 3.12, FastAPI | 告警通知适配，对接企业微信/钉钉机器人 |
 | `campus-wall-monitor-ui` | Vue3, Element Plus | 运营监控管理后台 |
-| `campus-wall-ops` | Docker, Docker Compose, Nginx, Prometheus, Grafana | 生产环境部署编排与监控基础设施 |
+| `campus-wall-ops` | Docker, Docker Compose, Nginx, Prometheus, Grafana | 生产环境部署编排与监控基础设施（含 `alert-adapter/` 告警转发子服务，对接企业微信/钉钉机器人——原独立子模块已并入） |
 
 各子项目的详细技术文档、API 说明和开发规范请进入对应目录查看其 `README.md`。
 
@@ -135,7 +131,7 @@ cd campus_wall
 | `10-backend/` | 后端 API 文档、数据库设计、部署说明 |
 | `11-frontend/` | 前端开发文档、组件说明、样式规范 |
 | `12-monitor-ui/` | 管理后台开发文档 |
-| `13-graphrag/` | GraphRAG 服务文档、知识库维护 |
+| `13-graphrag/` | AI/GraphRAG 服务文档（已并入 campus-wall-ai）、知识库维护 |
 | `14-data-pipeline/` | 数据管道设计、数据源说明 |
 | `15-alert-adapter/` | 告警规则、通知模板 |
 | `16-ops/` | 运维手册、Docker 部署指南 |

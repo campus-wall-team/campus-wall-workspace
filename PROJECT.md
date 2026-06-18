@@ -1,6 +1,6 @@
 # Campus Wall 校园墙 — 项目完整文档
 
-> 本文档是 Campus Wall 工作区的**完整技术总文档**，覆盖系统架构、7 个子模块、数据存储、AI 问答链路、监控告警、端口规划、本地启动与部署。内容以仓库源码和当前真实运行状态为准（含本地 GraphRAG 知识库 demo）。
+> 本文档是 Campus Wall 工作区的**完整技术总文档**，覆盖系统架构、6 个子模块、数据存储、AI 问答链路、监控告警、端口规划、本地启动与部署。内容以仓库源码和当前真实运行状态为准（含本地 GraphRAG 知识库 demo）。
 >
 > 根目录 [`README.md`](./README.md) 是面向新成员的简要总览；本文件是深入的技术参考。
 
@@ -27,7 +27,7 @@
 
 Campus Wall（校园墙）是一个面向高校学生的**匿名社交与信息互助平台**，集帖子发布、AI 智能问答（"AI 学长"）、实时私信、内容审核、数据分析与运维监控于一体。
 
-工作区采用 **Git Submodule 多仓库**结构：根仓库只锁定各子项目版本与跨项目文档，业务代码分散在 7 个独立子仓库中，各自拥有分支与提交历史。
+工作区采用 **Git Submodule 多仓库**结构：根仓库只锁定各子项目版本与跨项目文档，业务代码分散在 6 个独立子仓库中，各自拥有分支与提交历史。
 
 **核心能力：**
 - 用户端微信小程序：帖子社区、AI 学长问答、私信聊天、个人中心
@@ -57,9 +57,9 @@ Campus Wall（校园墙）是一个面向高校学生的**匿名社交与信息�
         ┌─────────────────────┴───────────────────────┐
         │ 业务服务层                                    │ AI / 数据层
 ┌───────────────────────────────┐         ┌──────────────────────────────┐
-│ campus_wall（Java/Spring Boot）│  HTTP   │ campus-wall-graphrag（FastAPI）│
+│ campus_wall（Java/Spring Boot）│  HTTP   │ campus-wall-ai（FastAPI）      │
 │ 用户·帖子·私信·AI 学长 agent·  │ ──────► │ 知识图谱检索 + LLM 问答/帖子匹配│
-│ 审核·RBAC  宿主机 :8080(systemd)│ :8001   │ Neo4j + Ollama 优先/DashScope │
+│ 审核·RBAC  宿主机 :8080(systemd)│ :8011   │ Neo4j + Ollama 优先/DashScope │
 └───────────────────────────────┘         └──────────────────────────────┘
         │                                          ▲
         │                          ┌───────────────┘ POST /index · /ingest-post
@@ -86,9 +86,9 @@ Campus Wall（校园墙）是一个面向高校学生的**匿名社交与信息�
 - **宿主机直接运行**（不在 Docker 内）：
   - Spring Boot 后端 `:8080`（生产用 systemd `campus-wall.service` 托管）
   - Ollama `:11434`（本地 LLM `qwen2.5:7b` + 嵌入 `bge-m3`）
-  - GraphRAG demo（`demo/run-graphrag.sh` → `:8001`，本地直跑，见 §6）
+  - campus-wall-ai demo（`demo/run-graphrag.sh` → `:8011`，本地直跑，见 §6）
 - **Docker Compose 编排**（`campus-wall-ops`）：MySQL、Redis、MinIO、Neo4j、Prometheus、Grafana、Alertmanager、各 exporter、alert-adapter、monitor-ui(nginx)。
-- 容器访问宿主机服务统一用 `host.docker.internal`（如 nginx 代理 `/api` → `host.docker.internal:8080`，graphrag 连 Ollama）。
+- 容器访问宿主机服务统一用 `host.docker.internal`（如 nginx 代理 `/api` → `host.docker.internal:8080`，campus-wall-ai 连 Ollama）。
 - 为避开宿主机已占用端口，Neo4j 对外映射为 **7475(HTTP) / 7688(Bolt)**（容器内仍是 7474/7687）。
 
 ### 2.3 关键数据流
@@ -98,8 +98,8 @@ Campus Wall（校园墙）是一个面向高校学生的**匿名社交与信息�
 小程序 → POST /api/v1/ai-senior/agent（JWT 鉴权，@RequestAttribute userId）
        → Java AgentService：读短期记忆 → 指代消解(QuestionContextualizer)
          → 规划(Planner) → 执行只读工具(ToolExecutor)
-              · search_posts 工具 → HTTP POST :8001/match-posts（找帖）
-              · knowledge_qa 工具 → HTTP POST :8001/query（知识库）
+              · search_posts 工具 → HTTP POST :8011/match-posts（找帖）
+              · knowledge_qa 工具 → HTTP POST :8011/query（知识库）
          → RelevanceJudge 反幻觉判定（结构化输出 List<Long>，从严放行相关帖）
          → 严格接地合成(Synthesizer) → 异步沉淀长期用户记忆
        → 回传 {success, answer, posts(匹配帖卡片), plan(调试), conversationId}
@@ -111,7 +111,7 @@ Campus Wall（校园墙）是一个面向高校学生的**匿名社交与信息�
 ```
 MySQL post+comment / 微信导出
   → data-pipeline: clean → desensitize（脱敏）→ KnowledgeUnit
-  → POST :8001/index → chunk → bge-m3 嵌入 + LLM 实体抽取 → 写入 Neo4j
+  → POST :8011/index → chunk → bge-m3 嵌入 + LLM 实体抽取 → 写入 Neo4j
 ```
 
 **③ 私信：**
@@ -136,11 +136,10 @@ Grafana 读 Prometheus → 看板（经 nginx /grafana 内嵌到管理后台）
 |--------|-----------|----------------|------|
 | `campus_wall` | Java 17 · Spring Boot 3.4.2 | MyBatis-Plus 3.5.9 · Spring AI 1.0.8（`spring-ai-starter-model-openai`，BOM 1.0.8） · JJWT 0.11.5 · MinIO 8.5.7 · Flyway · WebSocket · Micrometer Prometheus · AOP（审计） · bucket4j 8.10（限流） · spring-security-crypto（BCrypt） | 核心业务后端 |
 | `campus-wall-frontend` | uni-app 3.0 · Vue 3.4.21 · TS 4.9 | Vite 5.2 · Sass 1.99 · marked 18（Markdown） · tailwindcss 3.4 + weapp-tailwindcss · vue-i18n 9.1（已装未用） | 微信小程序用户端 |
-| `campus-wall-graphrag` | Python 3.12 · FastAPI 0.115 | neo4j 5.27 驱动（图存储 graph_store.py 自实现，未用 neo4j-graphrag 库） · OpenAI SDK 1.59（兼容 DashScope/Ollama） · Pydantic 2.10 | GraphRAG 问答引擎 |
+| `campus-wall-ai` | Python 3.12 · FastAPI 0.115 · LangGraph | neo4j 5.27 驱动（graph_store.py 自实现） · OpenAI SDK 1.59（兼容内网 Qwen/DashScope/Ollama） · LangGraph · SQLAlchemy · Redis · PyJWT · Pydantic 2.10 | AI 微服务 v2（已吸收原 graphrag）：QA agent · AI 发帖 · 知识问答/帖子匹配 · SSE · 异步记忆 |
 | `campus-wall-data-pipeline` | Python 3.x | PyMySQL 1.1.1 · requests 2.32 | ETL：导出·清洗·脱敏·入库（本机导出，非爬虫） |
 | `campus-wall-monitor-ui` | Vue 3.5.10 · JS | Element Plus 2.8.4 · Vue Router 4.4 · Pinia 2.2 · Axios 1.7 · Vite 5.4 | 运营管理后台 |
-| `campus-wall-alert-adapter` | Python 3.12 · FastAPI 0.115 | uvicorn 0.34 · httpx 0.28 | 告警转发（企微/钉钉） |
-| `campus-wall-ops` | Docker Compose | MySQL 8.0 · Redis 7.0 · Neo4j 5 · Prometheus v2.54 · Grafana 11.2 · Alertmanager v0.27 · Nginx 1.27 | 编排与监控基建 |
+| `campus-wall-ops` | Docker Compose | MySQL 8.0 · Redis 7.0 · Neo4j 5 · Prometheus v2.54 · Grafana 11.2 · Alertmanager v0.27 · Nginx 1.27 · alert-adapter(FastAPI) | 编排与监控基建（含 `alert-adapter/` 告警转发，原独立子模块已并入） |
 
 ---
 
@@ -192,7 +191,7 @@ Spring Boot 3.4.2 / Java 17 单体应用（Spring AI 1.0.8），按领域分包�
 
 **社区端新增能力**：板块分类（`BoardType` 5 值：RECOMMEND 推荐 / SECONDHAND 二手交易 requirePrice / PARTTIME 兼职 requireSalary / PROMOTION 推广 / TEAM 组队）；post 新增 is_top/price(NULL=面议)/salary/info_fee/contact/banner_object_name/is_sold；标签 tag/post_tag、组队 team_member、跨校 post_campus；排行榜（RankController + hot_rank_config，V3.8）；学生认证（student_verification 表 + user.student_verified/student_no，学生证 OCR 正反面 + AI 置信度 + 人工复核状态机）；发现页区域筛选（scope/campus/regionScope/locationKeywords）。
 
-**外部依赖配置**：DashScope（`qwen-plus`，兼容模式）、GraphRAG（默认 `http://localhost:8001`，超时 120s）、MinIO（bucket `campus-wall`）、Redis（多级缓存 TTL：用户 2h / 帖子详情 30m / 帖子列表 5m 等）。
+**外部依赖配置**：DashScope（`qwen-plus`，兼容模式）、campus-wall-ai（原 GraphRAG，默认 `http://localhost:8011`，超时 120s）、MinIO（bucket `campus-wall`）、Redis（多级缓存 TTL：用户 2h / 帖子详情 30m / 帖子列表 5m 等）。
 
 > ⚠️ `application-dev.yaml` 中数据源/Redis/MinIO 指向了一个公网 IP（`121.43.119.5`）与若干默认值，敏感项一律走环境变量（`MYSQL_PASSWORD`、`DASHSCOPE_API_KEY`、`MINIO_SECRET_KEY` 等），生产 profile 强制环境变量注入。
 
@@ -208,13 +207,13 @@ uni-app 3 + Vue 3 + TypeScript，5 个底部 Tab（圈子 / 发现 / AI / 私信
 - 环境变量在 `.env.local`（由 `.env.example` 复制）配 `VITE_API_BASE_URL`、`VITE_WS_BASE_URL`。
 - 根目录附多篇中文功能说明（聊天重构、选学校级联对接、发布页位置信息、主题样式统一、微信小程序配置、连接测试指南）。
 
-### 4.3 `campus-wall-graphrag` — GraphRAG 问答引擎
+### 4.3 `campus-wall-ai` — AI 微服务 v2（含 GraphRAG 引擎）
 
-详见 §6。FastAPI 服务，Neo4j 知识图谱 + 双向量索引 + 三角色 LLM（chat 抽取/生成、embed 向量化、vlm 读图）本地优先 + 云端降级。HTTP 契约 **9 端点**：`/health` `/index` `/query` `/query/stream`（SSE）`/ingest-post`（发帖入图谱）`/match-posts`（帖子匹配）`DELETE /posts/{id}` `/documents` `DELETE /documents/{id}`。
+详见 §6。FastAPI + LangGraph 服务（**已吸收原 `campus-wall-graphrag` 全部能力**），监听 **:8011**。在原 GraphRAG（Neo4j 知识图谱 + 双向量索引 + 三角色 LLM 本地优先/云端降级）之上，新增 LangGraph QA agent、AI 发帖子图、SSE 流式、Redis Streams 异步记忆。对外仍保留 graphrag HTTP 契约 **9 端点**：`/health` `/index` `/query` `/query/stream`（SSE）`/ingest-post`（发帖入图谱）`/match-posts`（帖子匹配）`DELETE /posts/{id}` `/documents` `DELETE /documents/{id}`；另有 `/ai/*` 用户面端点。
 
 ### 4.4 `campus-wall-data-pipeline` — 数据管道（ETL）
 
-把校园墙/微信原始数据，清洗、**脱敏**、转成「问题—参考答案」知识单元，灌入 GraphRAG（`POST /index`）。
+把校园墙/微信原始数据，清洗、**脱敏**、转成「问题—参考答案」知识单元，灌入 campus-wall-ai（原 graphrag，`POST /index`）。
 
 - **流程**：`数据源 → clean（去噪/广告/问候、问答检测）→ desensitize（PII 抹除 + 发言人假名化）→ KnowledgeUnit → /index`。
 - **数据源**：`sources/campus_wall.py`（MySQL post+comment → 问答线程）、`sources/wechat.py`（WeChatMsg 本地导出目录/CSV/JSON → 滑窗 Q&A）。
@@ -233,9 +232,9 @@ Vue 3.5 + Element Plus 桌面 SPA，**约 12 个权限驱动菜单页 + 403**：
 - 调用接口：`/api/v1/admin/login`、运营看板 `/api/v1/admin/stat/{overview,trend,active,distribution,top-posts}`、以及 `/api/v1/admin/*`（moderation/reports/feedbacks/verification/users/admins/roles/permissions/configs/audit）。
 - Grafana 内嵌看板 UID 已对接真实值 `campus-business / host-system / jvm-app`（`src/config.js` 整页 kiosk 内嵌，已弃用 panelId 单面板占位方案）。
 
-### 4.6 `campus-wall-alert-adapter` — 告警转发
+### 4.6 `campus-wall-ops/alert-adapter` — 告警转发（ops 子服务）
 
-单文件 FastAPI 微服务，把 Alertmanager webhook 转成**企业微信/钉钉** markdown 消息转发。
+单文件 FastAPI 微服务，把 Alertmanager webhook 转成**企业微信/钉钉** markdown 消息转发。**原独立子模块 `campus-wall-alert-adapter` 已并入 `campus-wall-ops/alert-adapter/`**（与监控栈同仓，compose `build: ./alert-adapter` 自洽）。
 
 - `POST /alert` 接收并转发到 `ALERT_WEBHOOK`；`GET /health` 健康检查。容器端口 **9094**。
 - `ALERT_CHANNEL`：`wecom`（默认）或 `dingtalk`，决定包体格式。
@@ -245,13 +244,13 @@ Vue 3.5 + Element Plus 桌面 SPA，**约 12 个权限驱动菜单页 + 403**：
 
 Docker Compose 统一编排所有基础设施与监控栈。
 
-- **主编排** `docker-compose.yml`：数据层（mysql/redis/minio/neo4j）、应用层（graphrag，`network_mode: host`）、监控采集（prometheus/node-exporter/redis-exporter/mysqld-exporter/blackbox-exporter）、可视化告警（grafana/alertmanager/alert-adapter）、展示层（monitor-ui nginx）。**14 个活跃服务**（cadvisor 整段注释，国内拉取失败）。
-- graphrag 服务：`build.context = ../campus-wall-graphrag`（含 Dockerfile，构建缺口已解决）、`network_mode: host`（移除 ports/extra_hosts，host 网络下用 localhost 直达 Ollama/后端），env 含 `NEO4J_URI=bolt://localhost:7688`、`BACKEND_BASE_URL=http://localhost:8080`、VLM_*、POST_VECTOR_INDEX_NAME，CHAT 走内网 Qwen3.6-35B（172.21.160.101:8005）；`env_file = ./graphrag-service/.env`（该目录仅存 `.env`，无 Dockerfile/代码）。
-- **资源限制覆盖** `docker-compose.override.yml`：按 4 核 8G 服务器分配（总约 5.5GB），如 neo4j 1.5g、mysql 1g、graphrag/prometheus 各 512m。`docker-compose.demo.yml` 为 demo 精简版。
-- **监控配置** `monitoring/`：Prometheus 抓取（15s，含 `host.docker.internal:8080` 的 Spring Boot `/actuator/prometheus`、blackbox 探针 MinIO/GraphRAG/Neo4j）；Grafana 数据源 + 3 个预置看板（business / host-system / jvm-app）；Alertmanager 单 route → `campus-webhook`（`alert-adapter:9094`）；8 条告警规则（ServiceDown、BlackboxProbeFailed、Host CPU/内存/磁盘、JvmHeapHigh、HttpServerErrorRateHigh[severity=**warning**]、ModerationBacklog[指标 `campus_moderation_pending`]）。
+- **主编排** `docker-compose.yml`：数据层（mysql/redis/minio/neo4j）、应用层（campus-wall-ai api + 记忆 worker，`network_mode: host`）、监控采集（prometheus/node-exporter/redis-exporter/mysqld-exporter/blackbox-exporter）、可视化告警（grafana/alertmanager/alert-adapter）、展示层（monitor-ui nginx）。**14 个活跃服务**（cadvisor 整段注释，国内拉取失败）。
+- campus-wall-ai 服务：`build.context = ../campus-wall-ai`（含 Dockerfile + app 代码）、`image: campus-wall-ai:2.0.0`、`network_mode: host`（host 网络下用 localhost 直达 Ollama/后端、局域网直连内网 LLM），端口由 `AI_SERVICE_PORT` 决定（默认 **8011**），env 含 `NEO4J_URI=bolt://localhost:7688`、`BACKEND_BASE_URL=http://localhost:8080`、VLM_*、POST_VECTOR_INDEX_NAME，CHAT 走内网 Qwen3.6-35B；另起同镜像 `campus-wall-ai-worker` 进程消费 Redis Streams 做异步记忆。`env_file = ./ai-service/.env`（该目录仅存部署侧 `.env`，密钥不入库）。
+- **资源限制覆盖** `docker-compose.override.yml`：按 4 核 8G 服务器分配（总约 5.5GB），如 neo4j 1.5g、mysql 1g、campus-wall-ai/prometheus 各 512m。`docker-compose.demo.yml` 为 demo 精简版。
+- **监控配置** `monitoring/`：Prometheus 抓取（15s，含 `host.docker.internal:8080` 的 Spring Boot `/actuator/prometheus`、blackbox 探针 MinIO/campus-wall-ai/Neo4j）；Grafana 数据源 + 3 个预置看板（business / host-system / jvm-app）；Alertmanager 单 route → `campus-webhook`（`alert-adapter:9094`）；8 条告警规则（ServiceDown、BlackboxProbeFailed、Host CPU/内存/磁盘、JvmHeapHigh、HttpServerErrorRateHigh[severity=**warning**]、ModerationBacklog[指标 `campus_moderation_pending`]）。
 - **nginx** `monitoring/nginx/monitor-ui.conf`：`/` SPA、`/api/` → `host.docker.internal:8080`、`/grafana/` → `campus-grafana:3000`（支持 WebSocket）。
 - **部署** `deploy/campus-wall.service`：systemd 托管宿主机 Spring Boot jar（`-Xms1g -Xmx1.5g`，失败自动重启）。
-- `alert-adapter/` 子目录含 Dockerfile（构建上下文）；graphrag 构建上下文已外移到 `../campus-wall-graphrag`。
+- `alert-adapter/` 子目录含完整源码（`app.py` + Dockerfile，原独立子模块已并入，`build: ./alert-adapter` 自洽）；campus-wall-ai 构建上下文指向同级 `../campus-wall-ai`。
 
 ---
 
@@ -277,13 +276,13 @@ Docker Compose 统一编排所有基础设施与监控栈。
 
 ### 6.1 架构
 
-`campus-wall-graphrag` 是 AI 学长的核心引擎，被 Java 后端通过 HTTP 调用。
+`campus-wall-ai`（原 `campus-wall-graphrag`）是 AI 学长的核心引擎，被 Java 后端通过 HTTP 调用。
 
 **三角色 LLM + 本地优先/云端降级 failover**（`app/llm.py` 的 `_with_fallback`，三个独立 OpenAI 兼容客户端）：
 - **chat**：primary 本地 Ollama `qwen2.5:7b` → fallback 云端 `qwen-plus`（默认开）。负责意图识别 / 三元组抽取 / 答案合成 / 匹配理由。
 - **embed**：本地 Ollama `bge-m3`（1024 维）→ fallback 默认关（向量已存 Neo4j，降级须同模型同维）。
 - **vlm**（新）：本地 Ollama `qwen2.5vl:7b` → fallback 云端 `qwen-vl-plus`（默认开），`describe_image` 读图。
-- ⚠️ 区分两条链路：graphrag **自身代码默认本地 Ollama 优先**、云端 DashScope 仅兜底；**容器部署侧**（ops `graphrag-service/.env`）把 chat 改走**内网 Qwen3.6-35B（172.21.160.101:8005）**、其云端降级默认关；本地 demo（`run-graphrag.sh`）才用 `qwen2.5:7b`。
+- ⚠️ 区分两条链路：campus-wall-ai **自身代码默认本地 Ollama 优先**、云端 DashScope 仅兜底；**容器部署侧**（ops `ai-service/.env`）把 chat 改走**内网 Qwen3.6-35B**、其云端降级默认关；本地 demo（`run-graphrag.sh`）才用 `qwen2.5:7b`。
 - 入库前经 `app/sanitize.py` 统一 PII 脱敏（用户文字 + VLM 图片描述抹除手机号/微信号/学号等）。
 
 **Graph + Vector 混合检索**：Neo4j 存 Document/Chunk/Entity + Post/Item/Intent/Category/Tag；两个原生向量索引 `campus_chunk_vector`(FOR Chunk) + `campus_post_vector`(FOR Item)，均 cosine、1024 维。检索 = 向量相似度 Top-K → 图遍历补充相关事实 → 拼 prompt → LLM 生成。
@@ -304,7 +303,7 @@ Docker Compose 统一编排所有基础设施与监控栈。
 
 > intent 合法值：`lost_found` / `second_hand` / `part_time` / `team_up` / `daily`。
 
-**配置（全部走环境变量，无硬编码 key；端口 8001 硬编码在 Dockerfile/脚本，无 `GRAPHRAG_PORT`）**：`NEO4J_URI`（默认 `bolt://localhost:7688`）`NEO4J_USER` `NEO4J_PASSWORD`；`CHAT_*`（BASE_URL/API_KEY/MODEL/TIMEOUT）+ `CHAT_FALLBACK_*`（ENABLED/BASE_URL/API_KEY/MODEL）；`EMBED_*` + `EMBED_FALLBACK_*` + `EMBED_DIM=1024`；`VECTOR_INDEX_NAME=campus_chunk_vector` + `POST_VECTOR_INDEX_NAME=campus_post_vector`；`VLM_*`（ENABLED/BASE_URL/API_KEY/MODEL=qwen2.5vl:7b/IMAGE_MODE/TIMEOUT）+ `VLM_FALLBACK_*`；`BACKEND_BASE_URL`（拼 `/api/v1/files/view` 取帖子图片）。
+**配置（全部走环境变量，无硬编码 key；端口由 `AI_SERVICE_PORT` 决定，默认 8011）**：`NEO4J_URI`（默认 `bolt://localhost:7688`）`NEO4J_USER` `NEO4J_PASSWORD`；`CHAT_*`（BASE_URL/API_KEY/MODEL/TIMEOUT）+ `CHAT_FALLBACK_*`（ENABLED/BASE_URL/API_KEY/MODEL）；`EMBED_*` + `EMBED_FALLBACK_*` + `EMBED_DIM=1024`；`VECTOR_INDEX_NAME=campus_chunk_vector` + `POST_VECTOR_INDEX_NAME=campus_post_vector`；`VLM_*`（ENABLED/BASE_URL/API_KEY/MODEL=qwen2.5vl:7b/IMAGE_MODE/TIMEOUT）+ `VLM_FALLBACK_*`；`BACKEND_BASE_URL`（拼 `/api/v1/files/view` 取帖子图片）。
 
 ### 6.2 本地 Demo 运行（已就绪）
 
@@ -312,7 +311,7 @@ Docker Compose 统一编排所有基础设施与监控栈。
 
 | 文件 | 作用 |
 |------|------|
-| `demo/run-graphrag.sh` | 启动脚本：清理 socks 代理 → 设 Neo4j(`bolt://localhost:7688`) / Chat(`qwen2.5:7b`) / Embed(`bge-m3`) 环境变量 → `uvicorn app.main:app --port 8001` |
+| `demo/run-graphrag.sh` | 启动脚本：清理 socks 代理 → 设 Neo4j(`bolt://localhost:7688`) / Chat(`qwen2.5:7b`) / Embed(`bge-m3`) 环境变量 → `uvicorn app.main:app --port 8011`（跑 campus-wall-ai） |
 | `demo/seed-knowledge.json` | 16 篇校园知识种子（选课、宿舍、图书馆、食堂、奖学金、转专业、四六级、快递、医保、重修、综测、体测、成绩、校园卡、新生报到、社团） |
 | `demo/seed.py` | 逐篇灌库脚本（每篇 `id=source` 幂等可重跑，跳过已完成项） |
 | `demo/logs/` | `graphrag.log`（服务日志）、`seed.log`（灌库进度） |
@@ -320,17 +319,17 @@ Docker Compose 统一编排所有基础设施与监控栈。
 **启动与灌库：**
 ```bash
 # 1. 启动服务（后台，日志进 demo/logs/graphrag.log）
-cd /home/nvidia/Desktop/campus-wall/campus-wall-graphrag
+cd /home/nvidia/Desktop/campus-wall/campus-wall-ai
 nohup bash ../demo/run-graphrag.sh >> ../demo/logs/graphrag.log 2>&1 & disown
 
 # 2. 健康检查
-curl --noproxy '*' http://localhost:8001/health   # {"status":"ok","neo4j":true}
+curl --noproxy '*' http://localhost:8011/health   # {"status":"ok","neo4j":true}
 
 # 3. 灌入知识库（幂等）
 cd ../demo && python3 seed.py
 
 # 4. 问答测试
-curl --noproxy '*' -X POST http://localhost:8001/query \
+curl --noproxy '*' -X POST http://localhost:8011/query \
   -H 'Content-Type: application/json' \
   -d '{"question":"四级多少分才能报六级？","topK":4}'
 ```
@@ -354,7 +353,7 @@ exporters / actuator ──► Prometheus（抓取 15s，留存 15d）
             （经 nginx /grafana 内嵌）   alert-adapter :9094 ──► 企业微信 / 钉钉
 ```
 
-- **抓取目标**：node/mysqld/redis exporter、Spring Boot `/actuator/prometheus`、blackbox 探针（MinIO/GraphRAG/Neo4j 健康，3 目标）。cadvisor 容器已注释（国内拉取失败），但 `prometheus.yml` 的 cadvisor job 残留会永久 DOWN。
+- **抓取目标**：node/mysqld/redis exporter、Spring Boot `/actuator/prometheus`、blackbox 探针（MinIO/campus-wall-ai/Neo4j 健康，3 目标）。cadvisor 容器已注释（国内拉取失败），但 `prometheus.yml` 的 cadvisor job 残留会永久 DOWN。
 - **告警规则（8 条 / 分 4 组：service-availability / host-resources / application / business）**：`ServiceDown`(up==0, critical)、`BlackboxProbeFailed`(critical)、`HostHighMemory/Disk/CPU`(>90%/85%/90%, warning，磁盘带 `{fstype!~"tmpfs|overlay|squashfs"}` 过滤)、`JvmHeapHigh`(>90%)、`HttpServerErrorRateHigh`(5xx>5%, **severity=warning**)、`ModerationBacklog`(指标 `campus_moderation_pending` 待审>50, 10m)。
 - **Alertmanager**：单 route 分组键 `[alertname, job]`，去重 5m、分组等待 30s、重复 4h（无 severity 子路由）；critical 抑制同源 warning；接收器 `campus-webhook` → `alert-adapter:9094/alert`。
 - **可视化入口**：管理后台（8090）内嵌 Grafana 看板；Grafana 开启匿名只读 + 允许嵌入，root URL 子路径 `/grafana/`。
@@ -367,7 +366,7 @@ exporters / actuator ──► Prometheus（抓取 15s，留存 15d）
 |------|------|----------|-----------|
 | **8080** | Spring Boot 后端 | 宿主机(systemd) | 业务 API、WebSocket、actuator |
 | **11434** | Ollama | 宿主机 | 本地 LLM `qwen2.5:7b` + 嵌入 `bge-m3` |
-| **8001** | GraphRAG (FastAPI) | 宿主机/容器 | 知识问答 / 帖子匹配（9 端点，见 §6.1） |
+| **8011** | campus-wall-ai (FastAPI) | 宿主机/容器 | AI 学长 + 知识问答 / 帖子匹配（含原 graphrag 9 端点，见 §6.1） |
 | **8090** | monitor-ui (nginx) | 容器 | **统一入口**：管理后台 SPA + `/api` + `/grafana` |
 | **3306** | MySQL 8.0 | 容器 | 业务数据库 |
 | **6379** | Redis 7.0 | 容器 | 缓存 |
@@ -414,7 +413,7 @@ cp .env.example .env && vim .env        # 数据源、Redis、DASHSCOPE_API_KEY�
 # 生产：./mvnw clean package 后用 deploy/campus-wall.service systemd 托管 jar
 ```
 
-### 9.4 启动 GraphRAG（本地 demo）
+### 9.4 启动 campus-wall-ai（本地 demo）
 
 见 §6.2（`demo/run-graphrag.sh` + `demo/seed.py`）。需本机 Ollama 已拉取 `qwen2.5:7b` 和 `bge-m3`，且 Neo4j 容器在跑。
 
@@ -442,9 +441,9 @@ docker compose restart monitor-ui   # 在 ops 目录执行
 
 各子项目的 `.env` **绝不提交**（已被 `.gitignore` 忽略），参考各自 `.env.example`。
 
-**campus_wall（必需）**：`MYSQL_URL` `MYSQL_USER` `MYSQL_PASSWORD`、`REDIS_HOST` `REDIS_PORT` `REDIS_PASSWORD`、`DASHSCOPE_API_KEY`、`MINIO_ENDPOINT` `MINIO_ACCESS_KEY` `MINIO_SECRET_KEY`、`WX_APPID` `WX_SECRET`、`ADMIN_USER` `ADMIN_PASS` `ADMIN_USER_ID`。可选：`GRAPHRAG_BASE_URL`(默认 `http://localhost:8001`) `GRAPHRAG_TIMEOUT_MS`(120000) `LLM_MODEL`(qwen-plus) `MINIO_BUCKET`(campus-wall)。
+**campus_wall（必需）**：`MYSQL_URL` `MYSQL_USER` `MYSQL_PASSWORD`、`REDIS_HOST` `REDIS_PORT` `REDIS_PASSWORD`、`DASHSCOPE_API_KEY`、`MINIO_ENDPOINT` `MINIO_ACCESS_KEY` `MINIO_SECRET_KEY`、`WX_APPID` `WX_SECRET`、`ADMIN_USER` `ADMIN_PASS` `ADMIN_USER_ID`。可选：`GRAPHRAG_BASE_URL`(默认 `http://localhost:8011`，配置键名沿用 graphrag.* 减少改动面) `GRAPHRAG_TIMEOUT_MS`(120000) `LLM_MODEL`(qwen-plus) `MINIO_BUCKET`(campus-wall)。
 
-**graphrag**（无 `GRAPHRAG_PORT`，端口 8001 硬编码）：`NEO4J_URI/USER/PASSWORD`、`CHAT_*` + `CHAT_FALLBACK_*`、`EMBED_*` + `EMBED_FALLBACK_*` + `EMBED_DIM`、`VLM_*` + `VLM_FALLBACK_*`、`VECTOR_INDEX_NAME` + `POST_VECTOR_INDEX_NAME`、`BACKEND_BASE_URL`。
+**campus-wall-ai**（端口 `AI_SERVICE_PORT` 默认 8011）：`NEO4J_URI/USER/PASSWORD`、`CHAT_*` + `CHAT_FALLBACK_*`、`EMBED_*` + `EMBED_FALLBACK_*` + `EMBED_DIM`、`VLM_*` + `VLM_FALLBACK_*`、`VECTOR_INDEX_NAME` + `POST_VECTOR_INDEX_NAME`、`BACKEND_BASE_URL`；v2 另需 `DB_URL`(MySQL ai_* 表)、`REDIS_*`(记忆 streams)、`JWT_SECRET`(验签转发用户 JWT)。详见 `ai-service/.env.example`。
 
 **data-pipeline**：`CW_MYSQL_*`（HOST/PORT/USER/PASSWORD/DB）、`GRAPHRAG_URL`、`NAME_BLACKLIST_FILE`。
 

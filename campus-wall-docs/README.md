@@ -50,9 +50,9 @@
 | campus_wall | [开发文档](10-backend/开发文档.md) | [.claude/CLAUDE.md](../campus_wall/.claude/CLAUDE.md) |
 | campus-wall-frontend | [开发文档](11-frontend/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-frontend/.claude/CLAUDE.md) |
 | campus-wall-monitor-ui | [开发文档](12-monitor-ui/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-monitor-ui/.claude/CLAUDE.md) |
-| campus-wall-graphrag | [开发文档](13-graphrag/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-graphrag/.claude/CLAUDE.md) |
+| campus-wall-ai（原 graphrag） | [开发文档](13-graphrag/开发文档.md) | [README.md](../campus-wall-ai/README.md) |
 | campus-wall-data-pipeline | [开发文档](14-data-pipeline/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-data-pipeline/.claude/CLAUDE.md) |
-| campus-wall-alert-adapter | [开发文档](15-alert-adapter/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-alert-adapter/.claude/CLAUDE.md) |
+| alert-adapter（并入 campus-wall-ops） | [开发文档](15-alert-adapter/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-ops/alert-adapter/.claude/CLAUDE.md) |
 | campus-wall-ops | [开发文档](16-ops/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-ops/.claude/CLAUDE.md) |
 
 ### 功能模块文档
@@ -110,20 +110,20 @@
 │       ├── 内容审核（敏感词+AI复审）
 │       └── 管理端 RBAC + 运营看板 API
 │
-├── AI 知识图谱服务
-│   └── campus-wall-graphrag  [Python + FastAPI + Neo4j]
+├── AI 微服务（含 GraphRAG 引擎）
+│   └── campus-wall-ai  [Python + FastAPI + LangGraph + Neo4j]
 │       ├── 文档索引 → 知识图谱
-│       └── 知识问答 ← GraphRAG检索+LLM生成
+│       └── 知识问答 ← GraphRAG检索+LLM生成（+ QA agent / AI 发帖 / 异步记忆）
 │
 ├── 数据管道
 │   └── campus-wall-data-pipeline  [Python ETL]
 │       ├── 提取（MySQL帖子数据）
 │       ├── 清洗（去噪/去广告）
 │       ├── 脱敏（PII移除）
-│       └── 推送 → GraphRAG
+│       └── 推送 → campus-wall-ai（/index）
 │
 ├── 告警适配器
-│   └── campus-wall-alert-adapter  [Python + FastAPI]
+│   └── campus-wall-ops/alert-adapter  [Python + FastAPI]
 │       └── Alertmanager → 企微/钉钉
 │
 └── 运维基础设施

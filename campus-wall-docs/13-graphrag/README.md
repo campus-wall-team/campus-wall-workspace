@@ -9,4 +9,4 @@
 ## 快速链接
 
 - [开发文档](./开发文档.md) - 详细开发指南
-- [仓库路径](../../campus-wall-graphrag/)
+- [仓库路径（已并入 campus-wall-ai）](../../campus-wall-ai/)
