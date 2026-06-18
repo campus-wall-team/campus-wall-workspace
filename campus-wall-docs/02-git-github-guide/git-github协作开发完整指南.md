@@ -136,7 +136,7 @@ GitHub 提供的额外能力（Git 本身没有的）：
 
 ### 1.6 校园墙项目的 GitHub 使用概况
 
-校园墙项目由 **7 个独立模块**组成，每个模块是一个独立的 Git 仓库：
+校园墙项目由 **6 个独立模块**组成，每个模块是一个独立的 Git 仓库：
 
 | 仓库 | 技术栈 | 说明 |
 |------|--------|------|
@@ -145,8 +145,7 @@ GitHub 提供的额外能力（Git 本身没有的）：
 | `campus-wall-monitor-ui` | Vue 3 + Element Plus | 管理后台前端 |
 | `campus-wall-ai` | Python + FastAPI | AI 知识图谱/问答服务（原 campus-wall-graphrag 已并入，端口 8011） |
 | `campus-wall-data-pipeline` | Python ETL | 数据管道（爬虫/清洗/写入） |
-| `campus-wall-alert-adapter` | Python + FastAPI | 告警适配器 |
-| `campus-wall-ops` | Docker Compose | 运维基础设施配置 |
+| `campus-wall-ops` | Docker Compose | 运维基础设施配置（含告警适配器 alert-adapter，原独立仓库 campus-wall-alert-adapter 已并入） |
 
 每个仓库采用统一的[分支规范](../01-development-standards/00-开发规范.md)，通过 Pull Request 进行协作。详细的模块化开发说明见[第 9 章](#第-9-章多仓库模块化开发)。
 
@@ -400,8 +399,7 @@ E:\Code\project\campus-wall-workspace\    ← 工作空间根目录（手动创�
 ├── campus-wall-monitor-ui\                ← 管理后台
 ├── campus-wall-ai\                        ← AI 服务（原 campus-wall-graphrag 已并入，端口 8011）
 ├── campus-wall-data-pipeline\             ← 数据管道
-├── campus-wall-alert-adapter\             ← 告警适配器
-├── campus-wall-ops\                       ← 运维配置
+├── campus-wall-ops\                       ← 运维配置（含告警适配器 alert-adapter，原 campus-wall-alert-adapter 已并入）
 └── docs\                                  ← 项目文档（本指南所在目录）
 ```
 
@@ -420,8 +418,7 @@ git clone git@github.com:your-org/campus-wall-frontend.git
 git clone git@github.com:your-org/campus-wall-monitor-ui.git
 git clone git@github.com:your-org/campus-wall-ai.git      # AI 服务（原 campus-wall-graphrag 已并入，端口 8011）
 git clone git@github.com:your-org/campus-wall-data-pipeline.git
-git clone git@github.com:your-org/campus-wall-alert-adapter.git
-git clone git@github.com:your-org/campus-wall-ops.git
+git clone git@github.com:your-org/campus-wall-ops.git    # 运维配置（含告警适配器 alert-adapter，原 campus-wall-alert-adapter 已并入）
 ```
 
 > **如果你的团队还没有在 GitHub 上创建这些仓库**，你需要先由管理员创建好仓库，再克隆。或者你可以先跳过本章，在本地开发，等仓库创建好后再关联远程。
@@ -448,7 +445,7 @@ git branch -a
 
 ### 3.5 VS Code 多根工作区配置
 
-校园墙项目有 7 个独立仓库，在 VS Code 中可以配置"多根工作区"，让所有仓库同时显示在侧边栏。
+校园墙项目有 6 个独立仓库，在 VS Code 中可以配置"多根工作区"，让所有仓库同时显示在侧边栏。
 
 **操作方法**：
 
@@ -468,7 +465,6 @@ git branch -a
         { "name": "管理后台 campus-wall-monitor-ui", "path": ".\\campus-wall-monitor-ui" },
         { "name": "AI campus-wall-ai", "path": ".\\campus-wall-ai" },
         { "name": "数据管道 campus-wall-data-pipeline", "path": ".\\campus-wall-data-pipeline" },
-        { "name": "告警 campus-wall-alert-adapter", "path": ".\\campus-wall-alert-adapter" },
         { "name": "运维 campus-wall-ops", "path": ".\\campus-wall-ops" },
         { "name": "文档 docs", "path": ".\\docs" }
     ]
@@ -1442,7 +1438,7 @@ git push origin --delete feature/post-pin
 
 > ⭐ 本章是校园墙项目协作的**核心章节**。如果你只认真读一章，就读这章。
 
-### 9.1 校园墙 7 仓库结构总览
+### 9.1 校园墙 6 仓库结构总览
 
 校园墙项目采用"多仓库模块化"架构，每个子模块有独立的 Git 仓库：
 
@@ -1456,14 +1452,11 @@ git push origin --delete feature/post-pin
 │  └──────────────┘  └──────────────┘  └────────────┘ │
 │                                                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │
-│  │ campus-wall-ai│  │ data-pipeline│  │   alert     │ │
-│  │ (AI服务:8011) │  │  (数据管道)  │  │ (告警适配器)│ │
+│  │ campus-wall-ai│  │ data-pipeline│  │     ops     │ │
+│  │ (AI服务:8011) │  │  (数据管道)  │  │  (运维配置) │ │
 │  └──────────────┘  └──────────────┘  └────────────┘ │
 │                                                      │
-│  ┌──────────────┐                                    │
-│  │     ops      │                                    │
-│  │  (运维配置)   │                                    │
-│  └──────────────┘                                    │
+│  注：告警适配器 alert-adapter 已并入 ops/alert-adapter/ │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -1486,8 +1479,7 @@ git push origin --delete feature/post-pin
 | `campus-wall-monitor-ui` | 1 人 | 管理后台（数据概览 + 审核） |
 | `campus-wall-ai` | 1 人 | AI 知识图谱 + 问答接口（原 campus-wall-graphrag 已并入，端口 8011） |
 | `campus-wall-data-pipeline` | 1 人 | 数据采集、清洗、脱敏、写入 |
-| `campus-wall-alert-adapter` | 1 人 | 告警通知转发 |
-| `campus-wall-ops` | 1 人 | Docker Compose、Nginx、监控面板 |
+| `campus-wall-ops` | 1 人 | Docker Compose、Nginx、监控面板、告警通知转发（alert-adapter，原 campus-wall-alert-adapter 已并入） |
 
 > 初期可以一人负责 1-2 个模块。后端和前端的负责人需要密切沟通 API 接口格式。
 
@@ -1495,7 +1487,7 @@ git push origin --delete feature/post-pin
 
 #### VS Code 多根工作区
 
-在第 3 章已经配置了多根工作区，所有 7 个仓库都在同一个 VS Code 窗口中可见。
+在第 3 章已经配置了多根工作区，所有 6 个仓库都在同一个 VS Code 窗口中可见。
 
 **重要习惯**：每次在终端执行 git 命令前，先确认当前在哪个仓库目录下！
 
@@ -1606,7 +1598,7 @@ git push -u origin feature/post-pin-ui
 | 用户端前端 Dev Server | 5173 | campus-wall-frontend |
 | 管理后台 Dev Server | 5174 | campus-wall-monitor-ui |
 | AI 服务 API | 8011 | campus-wall-ai（原 GraphRAG :8001 已并入/下线） |
-| 告警适配器 | 8002 | campus-wall-alert-adapter |
+| 告警适配器 | 8002 | campus-wall-ops（alert-adapter，原 campus-wall-alert-adapter 已并入） |
 | MySQL | 3306 | campus-wall-ops |
 | Redis | 6379 | campus-wall-ops |
 | MinIO API | 9000 | campus-wall-ops |
@@ -1649,7 +1641,7 @@ feat(page/home): 首页帖子列表支持置顶展示
 
 ### 9.7 新人上手顺序建议
 
-新加入团队时，不需要一下子了解所有 7 个仓库。建议按以下顺序逐步深入：
+新加入团队时，不需要一下子了解所有 6 个仓库。建议按以下顺序逐步深入：
 
 ```
 第 1 步：环境搭建（1 天）
@@ -1669,7 +1661,7 @@ feat(page/home): 首页帖子列表支持置顶展示
 └── 第一个任务：修改一个页面样式或增加一个展示字段
 
 第 4 步：了解其他模块（按需，1-2 天）
-├── 按你的任务分配到 campus-wall-ai / data-pipeline / alert-adapter
+├── 按你的任务分配到 campus-wall-ai / data-pipeline / campus-wall-ops（含 alert-adapter）
 └── 阅读对应仓库的 README.md 和 CLAUDE.md
 ```
 
@@ -2121,7 +2113,7 @@ git remote set-url origin git@github.com:your-org/campus_wall.git
 
 ### 10.13 在错误的仓库目录下操作（多仓库特有问题）
 
-**场景**：你有 7 个仓库在同一个 workspace 下，经常犯的错误是把 A 仓库的改动 push 到了 B 仓库。
+**场景**：你有 6 个仓库在同一个 workspace 下，经常犯的错误是把 A 仓库的改动 push 到了 B 仓库。
 
 **症状自查**：
 
@@ -2248,7 +2240,7 @@ docker-compose up -d --build 服务名
 |------|------|----------|
 | [开发规范](../01-development-standards/00-开发规范.md) | Git 分支规范、Commit Message 规范、代码规范 | 本指南的第 5、6 章的规范出处 |
 | [新人快速上手](../00-project-overview/04-新人快速上手.md) | 环境搭建、Docker、各服务启动 | 读本指南第 3 章时参考 |
-| [系统架构](../00-project-overview/02-系统架构.md) | 7 个服务的详细职责和通信方式 | 读本指南第 9 章前建议了解 |
+| [系统架构](../00-project-overview/02-系统架构.md) | 6 个服务的详细职责和通信方式 | 读本指南第 9 章前建议了解 |
 | [部署指南](../20-operation/00-部署指南.md) | 环境部署流程、备份策略 | 需要部署时参考 |
 | [目录结构规范](../01-development-standards/01-目录结构规范.md) | 各仓库的标准目录结构 | 创建新文件/模块时参考 |
 

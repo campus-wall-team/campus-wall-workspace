@@ -245,7 +245,7 @@ Vue 3.5 + Element Plus 桌面 SPA，**约 12 个权限驱动菜单页 + 403**：
 Docker Compose 统一编排所有基础设施与监控栈。
 
 - **主编排** `docker-compose.yml`：数据层（mysql/redis/minio/neo4j）、应用层（campus-wall-ai api + 记忆 worker，`network_mode: host`）、监控采集（prometheus/node-exporter/redis-exporter/mysqld-exporter/blackbox-exporter）、可视化告警（grafana/alertmanager/alert-adapter）、展示层（monitor-ui nginx）。**14 个活跃服务**（cadvisor 整段注释，国内拉取失败）。
-- campus-wall-ai 服务：`build.context = ../campus-wall-ai`（含 Dockerfile + app 代码）、`image: campus-wall-ai:2.0.0`、`network_mode: host`（host 网络下用 localhost 直达 Ollama/后端、局域网直连内网 LLM），端口由 `AI_SERVICE_PORT` 决定（默认 **8011**），env 含 `NEO4J_URI=bolt://localhost:7688`、`BACKEND_BASE_URL=http://localhost:8080`、VLM_*、POST_VECTOR_INDEX_NAME，CHAT 走内网 Qwen3.6-35B；另起同镜像 `campus-wall-ai-worker` 进程消费 Redis Streams 做异步记忆。`env_file = ./ai-service/.env`（该目录仅存部署侧 `.env`，密钥不入库）。
+- campus-wall-ai 服务：`build.context = ../campus-wall-ai`（含 Dockerfile + app 代码）、`image: campus-wall-ai:2.0.0`、`network_mode: host`（host 网络下用 localhost 直达 Ollama/后端、局域网直连内网 LLM），端口由 `AI_SERVICE_PORT` 决定（默认 **8011**），env 含 `NEO4J_URI=bolt://localhost:7688`、`BACKEND_BASE_URL=http://localhost:8080`、VLM_*、POST_VECTOR_INDEX_NAME，CHAT 走内网 Qwen3.6-35B（172.21.160.101:8003）；另起同镜像 `campus-wall-ai-worker` 进程消费 Redis Streams 做异步记忆。`env_file = ./ai-service/.env`（该目录仅存部署侧 `.env`，密钥不入库）。
 - **资源限制覆盖** `docker-compose.override.yml`：按 4 核 8G 服务器分配（总约 5.5GB），如 neo4j 1.5g、mysql 1g、campus-wall-ai/prometheus 各 512m。`docker-compose.demo.yml` 为 demo 精简版。
 - **监控配置** `monitoring/`：Prometheus 抓取（15s，含 `host.docker.internal:8080` 的 Spring Boot `/actuator/prometheus`、blackbox 探针 MinIO/campus-wall-ai/Neo4j）；Grafana 数据源 + 3 个预置看板（business / host-system / jvm-app）；Alertmanager 单 route → `campus-webhook`（`alert-adapter:9094`）；8 条告警规则（ServiceDown、BlackboxProbeFailed、Host CPU/内存/磁盘、JvmHeapHigh、HttpServerErrorRateHigh[severity=**warning**]、ModerationBacklog[指标 `campus_moderation_pending`]）。
 - **nginx** `monitoring/nginx/monitor-ui.conf`：`/` SPA、`/api/` → `host.docker.internal:8080`、`/grafana/` → `campus-grafana:3000`（支持 WebSocket）。
@@ -282,7 +282,7 @@ Docker Compose 统一编排所有基础设施与监控栈。
 - **chat**：primary 本地 Ollama `qwen2.5:7b` → fallback 云端 `qwen-plus`（默认开）。负责意图识别 / 三元组抽取 / 答案合成 / 匹配理由。
 - **embed**：本地 Ollama `bge-m3`（1024 维）→ fallback 默认关（向量已存 Neo4j，降级须同模型同维）。
 - **vlm**（新）：本地 Ollama `qwen2.5vl:7b` → fallback 云端 `qwen-vl-plus`（默认开），`describe_image` 读图。
-- ⚠️ 区分两条链路：campus-wall-ai **自身代码默认本地 Ollama 优先**、云端 DashScope 仅兜底；**容器部署侧**（ops `ai-service/.env`）把 chat 改走**内网 Qwen3.6-35B**、其云端降级默认关；本地 demo（`run-graphrag.sh`）才用 `qwen2.5:7b`。
+- ⚠️ 区分两条链路：campus-wall-ai **自身代码默认本地 Ollama 优先**、云端 DashScope 仅兜底；**容器部署侧**（ops `ai-service/.env`）把 chat 改走**内网 Qwen3.6-35B（172.21.160.101:8003）**、其云端降级默认关；本地 demo（`run-graphrag.sh`）才用 `qwen2.5:7b`。
 - 入库前经 `app/sanitize.py` 统一 PII 脱敏（用户文字 + VLM 图片描述抹除手机号/微信号/学号等）。
 
 **Graph + Vector 混合检索**：Neo4j 存 Document/Chunk/Entity + Post/Item/Intent/Category/Tag；两个原生向量索引 `campus_chunk_vector`(FOR Chunk) + `campus_post_vector`(FOR Item)，均 cosine、1024 维。检索 = 向量相似度 Top-K → 图遍历补充相关事实 → 拼 prompt → LLM 生成。

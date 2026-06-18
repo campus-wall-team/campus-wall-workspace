@@ -6,7 +6,7 @@
 
 ## 一、我们为什么用 Git Submodules？
 
-校园墙项目由 7 个独立服务组成（后端、前端、AI、数据管道、告警、运维、监控后台）。每个服务：
+校园墙项目由 6 个独立子模块组成（后端、前端、AI、数据管道、运维、监控后台；告警适配器 alert-adapter 已并入运维 campus-wall-ops/alert-adapter/）。每个子模块：
 - 技术栈不同（Java / Python / Vue / uni-app）
 - 有自己的版本迭代节奏
 - 由不同成员主要负责
@@ -31,9 +31,8 @@ campus-wall-workspace/          ← 你克隆下来的根目录（根仓库）
 ├── campus_wall/                ← Submodule（Java 主后端）
 ├── campus-wall-ai/             ← Submodule（AI 问答服务；原 campus-wall-graphrag 已并入，端口 8011）
 ├── campus-wall-data-pipeline/  ← Submodule（数据管道）
-├── campus-wall-alert-adapter/  ← Submodule（告警推送）
 ├── campus-wall-monitor-ui/     ← Submodule（监控后台）
-├── campus-wall-ops/            ← Submodule（运维部署）
+├── campus-wall-ops/            ← Submodule（运维部署；含告警推送 alert-adapter，原 campus-wall-alert-adapter 已并入）
 │
 ├── .gitmodules                 ← Submodule 的配置清单
 └── README.md                   ← 根仓库说明
@@ -56,7 +55,7 @@ git clone --recurse-submodules https://github.com/campus-wall-team/campus-wall-w
 这条命令会自动：
 1. 下载根仓库
 2. 读取 `.gitmodules`
-3. 把所有 7 个子项目也下载下来
+3. 把所有 6 个子项目也下载下来
 
 ### 方法 B：先克隆根仓库，再拉子项目
 
@@ -140,7 +139,7 @@ git submodule status
 输出示例：
 
 ```
- 4a3b2c1d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3 campus-wall-alert-adapter (v1.2.0)
+ 4a3b2c1d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3 campus-wall-ai (v1.2.0)
  7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6 campus-wall-data-pipeline (v2.1.0-5-gabcd123)
 ```
 

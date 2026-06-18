@@ -382,7 +382,7 @@ def create_tech_barrier(doc):
 
     add_heading_custom(doc, '4.1 系统架构概览', level=2)
     add_paragraph_custom(doc,
-        '校园墙采用前后端分离 + 微服务架构，由 7 个独立服务模块组成，确保系统的高可用、高扩展和高安全性。',
+        '校园墙采用前后端分离 + 微服务架构，由 6 个独立服务模块组成，确保系统的高可用、高扩展和高安全性。',
         indent=True)
 
     table = doc.add_table(rows=1, cols=4)
@@ -400,7 +400,7 @@ def create_tech_barrier(doc):
         ('客户端', 'H5/小程序/管理后台', 'Vue 3 + uni-app + Element Plus', '用户交互，一套代码多端运行'),
         ('网关层', 'Nginx', 'Nginx 1.27', '反向代理、负载均衡、SSL终端'),
         ('核心业务', 'campus_wall', 'Java 17 + Spring Boot 3', '用户认证、帖子、评论、AI代理、私信、审核'),
-        ('AI引擎', 'campus-wall-graphrag', 'Python + FastAPI + Neo4j', '知识图谱构建、AI问答、向量检索'),
+        ('AI引擎', 'campus-wall-ai', 'Python + FastAPI + Neo4j', '知识图谱构建、AI问答、向量检索'),
         ('数据处理', 'campus-wall-data-pipeline', 'Python ETL', '数据提取、清洗、脱敏、推送至知识库'),
         ('数据存储', 'MySQL + Redis + MinIO', 'MySQL 8.0 + Redis 7.0', '业务数据、缓存、图片存储'),
         ('知识存储', 'Neo4j', 'Neo4j 5', '知识图谱 + 原生向量索引'),

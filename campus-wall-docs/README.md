@@ -22,7 +22,7 @@
 |------|------|
 | [项目介绍](00-project-overview/00-项目介绍.md) | 项目背景、愿景、核心功能、目标用户 |
 | [技术栈总览](00-project-overview/01-技术栈总览.md) | 完整技术栈矩阵、各服务对照表、版本信息 |
-| [系统架构](00-project-overview/02-系统架构.md) | 整体架构图、7个服务职责、服务间通信、部署拓扑 |
+| [系统架构](00-project-overview/02-系统架构.md) | 整体架构图、6个服务职责、服务间通信、部署拓扑 |
 | [数据流图](00-project-overview/03-数据流图.md) | 发帖、AI问答、内容审核、私信、数据管道、监控告警流程 |
 | [新人快速上手](00-project-overview/04-新人快速上手.md) | 环境搭建、一键启动、验证完整链路、第一个开发任务 |
 | [项目进度与完成度](00-project-overview/05-项目进度.md) | 各模块完成度矩阵、当前可运行 Demo、已知 TODO、未来功能占位区 |
@@ -32,7 +32,7 @@
 | 文档 | 说明 |
 |------|------|
 | [开发规范](01-development-standards/00-开发规范.md) | Git规范、Commit规范、Java/TS/Python代码规范、代码审查Checklist |
-| [目录结构规范](01-development-standards/01-目录结构规范.md) | 7个仓库的标准目录结构、新增文件规范 |
+| [目录结构规范](01-development-standards/01-目录结构规范.md) | 6个仓库的标准目录结构、新增文件规范 |
 | [API设计规范](01-development-standards/02-API设计规范.md) | RESTful API规范、统一响应格式、分页、认证、错误码、WebSocket |
 | [数据库规范](01-development-standards/03-数据库规范.md) | 表/字段/索引命名、字段设计、Flyway迁移、SQL规范 |
 

@@ -5,4 +5,4 @@
 ## 快速链接
 
 - [开发文档](./开发文档.md) - 详细开发指南
-- [仓库路径](../../campus-wall-alert-adapter/)
+- [仓库路径](../../campus-wall-ops/alert-adapter/)
