@@ -6,6 +6,8 @@
 # 管理员用 export-team-env.sh 生成的、含真实密钥的团队配置，绝不提交
 /deploy/team-dev/backend.env
 /deploy/team-dev/application-local.yaml
+# 分发给各开发机(B/C…)的含密钥本地配置，按 IP 命名，同样绝不提交
+/deploy/team-dev/application-local.*.yaml
 # 数据库备份（含业务数据，勿提交）
 /deploy/server/backups/
 
