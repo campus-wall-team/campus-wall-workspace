@@ -1,8 +1,8 @@
 # ============================================================
-# 【服务器管理员可选】把 GraphRAG 设为开机自启的 systemd 服务
+# 【已废弃 / 可选】把 campus-wall-ai（原 GraphRAG 已并入）设为开机自启的 systemd 服务
 #
-# 中间件容器已是 restart=unless-stopped 会自动拉起；GraphRAG 目前是 host 直跑，
-# 装上本服务后它也能开机自启、崩溃自动重启。
+# 推荐改用 campus-wall-ops 的 docker-compose 服务 ai-api（已 restart=unless-stopped 自启）。
+# 仅当坚持 host 直跑（非容器）时才需要本 unit；它经 demo/run-graphrag.sh 起 campus-wall-ai(:8011)。
 #
 # 安装：
 #   sudo cp deploy/server/campus-graphrag.service /etc/systemd/system/
@@ -15,7 +15,7 @@
 # 前提：已 cp demo/.env.example demo/.env 并填好 NEO4J_PASSWORD。
 # ============================================================
 [Unit]
-Description=Campus Wall GraphRAG service (AI 学长问答引擎)
+Description=Campus Wall AI service (campus-wall-ai，原 GraphRAG 已并入)
 After=network-online.target docker.service
 Wants=network-online.target
 

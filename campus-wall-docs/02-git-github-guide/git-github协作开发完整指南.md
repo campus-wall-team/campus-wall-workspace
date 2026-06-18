@@ -143,7 +143,7 @@ GitHub 提供的额外能力（Git 本身没有的）：
 | `campus_wall` | Java 17 + Spring Boot | 主后端服务 |
 | `campus-wall-frontend` | Vue 3 + uni-app | 用户端前端（H5 + 微信小程序） |
 | `campus-wall-monitor-ui` | Vue 3 + Element Plus | 管理后台前端 |
-| `campus-wall-graphrag` | Python + FastAPI | AI 知识图谱服务 |
+| `campus-wall-ai` | Python + FastAPI | AI 知识图谱/问答服务（原 campus-wall-graphrag 已并入，端口 8011） |
 | `campus-wall-data-pipeline` | Python ETL | 数据管道（爬虫/清洗/写入） |
 | `campus-wall-alert-adapter` | Python + FastAPI | 告警适配器 |
 | `campus-wall-ops` | Docker Compose | 运维基础设施配置 |
@@ -398,7 +398,7 @@ E:\Code\project\campus-wall-workspace\    ← 工作空间根目录（手动创�
 ├── campus_wall\                           ← 主后端
 ├── campus-wall-frontend\                  ← 用户端前端
 ├── campus-wall-monitor-ui\                ← 管理后台
-├── campus-wall-graphrag\                  ← AI 服务
+├── campus-wall-ai\                        ← AI 服务（原 campus-wall-graphrag 已并入，端口 8011）
 ├── campus-wall-data-pipeline\             ← 数据管道
 ├── campus-wall-alert-adapter\             ← 告警适配器
 ├── campus-wall-ops\                       ← 运维配置
@@ -418,7 +418,7 @@ Set-Location E:\Code\project\campus-wall-workspace
 git clone git@github.com:your-org/campus_wall.git
 git clone git@github.com:your-org/campus-wall-frontend.git
 git clone git@github.com:your-org/campus-wall-monitor-ui.git
-git clone git@github.com:your-org/campus-wall-graphrag.git
+git clone git@github.com:your-org/campus-wall-ai.git      # AI 服务（原 campus-wall-graphrag 已并入，端口 8011）
 git clone git@github.com:your-org/campus-wall-data-pipeline.git
 git clone git@github.com:your-org/campus-wall-alert-adapter.git
 git clone git@github.com:your-org/campus-wall-ops.git
@@ -466,7 +466,7 @@ git branch -a
         { "name": "后端 campus_wall", "path": ".\\campus_wall" },
         { "name": "用户端 campus-wall-frontend", "path": ".\\campus-wall-frontend" },
         { "name": "管理后台 campus-wall-monitor-ui", "path": ".\\campus-wall-monitor-ui" },
-        { "name": "AI campus-wall-graphrag", "path": ".\\campus-wall-graphrag" },
+        { "name": "AI campus-wall-ai", "path": ".\\campus-wall-ai" },
         { "name": "数据管道 campus-wall-data-pipeline", "path": ".\\campus-wall-data-pipeline" },
         { "name": "告警 campus-wall-alert-adapter", "path": ".\\campus-wall-alert-adapter" },
         { "name": "运维 campus-wall-ops", "path": ".\\campus-wall-ops" },
@@ -1013,7 +1013,7 @@ update
 | `post` | 帖子模块 |
 | `comment` | 评论模块 |
 | `user` | 用户模块 |
-| `ai` | AI 模块（转发 GraphRAG） |
+| `ai` | AI 模块（转发 campus-wall-ai，原 GraphRAG 已并入） |
 | `admin` | 管理后台 API |
 | `chat` | 私信/WebSocket |
 | `config` | 配置相关（application.yml、环境变量） |
@@ -1028,7 +1028,7 @@ update
 | `utils` | 工具函数 |
 | `style` | 样式/主题 |
 
-#### Python 仓库（campus-wall-graphrag / data-pipeline / alert-adapter）
+#### Python 仓库（campus-wall-ai / data-pipeline / alert-adapter）
 
 | Scope | 说明 |
 |-------|------|
@@ -1070,7 +1070,7 @@ git commit -m "feat(ai): AI 问答支持多轮对话
 
 - 前端 ai 页面增加对话历史展示
 - 后端 /ai/chat 接口增加 conversationId 参数
-- GraphRAG 服务增加 /chat/history 接口"
+- campus-wall-ai（原 GraphRAG）服务增加 /chat/history 接口"
 ```
 
 **❌ 坏的 commit message**（禁止使用）：
@@ -1456,8 +1456,8 @@ git push origin --delete feature/post-pin
 │  └──────────────┘  └──────────────┘  └────────────┘ │
 │                                                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │
-│  │  graphrag    │  │ data-pipeline│  │   alert     │ │
-│  │   (AI服务)   │  │  (数据管道)  │  │ (告警适配器)│ │
+│  │ campus-wall-ai│  │ data-pipeline│  │   alert     │ │
+│  │ (AI服务:8011) │  │  (数据管道)  │  │ (告警适配器)│ │
 │  └──────────────┘  └──────────────┘  └────────────┘ │
 │                                                      │
 │  ┌──────────────┐                                    │
@@ -1484,7 +1484,7 @@ git push origin --delete feature/post-pin
 | `campus_wall` | 1-2 人 | 后端核心业务逻辑、API 接口 |
 | `campus-wall-frontend` | 1-2 人 | 用户端 H5 + 微信小程序 |
 | `campus-wall-monitor-ui` | 1 人 | 管理后台（数据概览 + 审核） |
-| `campus-wall-graphrag` | 1 人 | AI 知识图谱 + 问答接口 |
+| `campus-wall-ai` | 1 人 | AI 知识图谱 + 问答接口（原 campus-wall-graphrag 已并入，端口 8011） |
 | `campus-wall-data-pipeline` | 1 人 | 数据采集、清洗、脱敏、写入 |
 | `campus-wall-alert-adapter` | 1 人 | 告警通知转发 |
 | `campus-wall-ops` | 1 人 | Docker Compose、Nginx、监控面板 |
@@ -1560,12 +1560,12 @@ git push -u origin feature/post-pin-ui
 - 后端默默改完接口，不说一声 → 前端发现调用失败 → 沟通成本加倍
 - 前后端都没定接口格式就开始各写各的 → 最后发现对不上 → 返工
 
-#### 场景 B：GraphRAG 接口变更，后端需要同步
+#### 场景 B：campus-wall-ai（原 GraphRAG 已并入）接口变更，后端需要同步
 
 ```
 ┌─────────────────────┐          ┌─────────────────────┐
-│  campus-wall-graphrag│          │     campus_wall      │
-│                     │          │                     │
+│   campus-wall-ai     │          │     campus_wall      │
+│   (原 GraphRAG:8011) │          │                     │
 │  /query 接口变更     │ ──────→ │  AiService.java     │
 │  返回格式变了         │  通知    │  解析逻辑需要更新     │
 └─────────────────────┘          └─────────────────────┘
@@ -1573,10 +1573,10 @@ git push -u origin feature/post-pin-ui
 
 **流程**：
 
-1. GraphRAG 负责人在 PR 描述中说明接口变更的具体内容
+1. campus-wall-ai 负责人在 PR 描述中说明接口变更的具体内容
 2. 后端负责人在 Issue 下回复确认收到
-3. GraphRAG 的 PR 合并后，后端立即更新对应的解析代码
-4. 后端的 Commit Message 中注明：`fix(ai): 适配 GraphRAG /query 接口 v2 格式`
+3. campus-wall-ai 的 PR 合并后，后端立即更新对应的解析代码
+4. 后端的 Commit Message 中注明：`fix(ai): 适配 campus-wall-ai /query 接口 v2 格式`
 
 #### 场景 C：运维配置变更，需要通知全员
 
@@ -1605,7 +1605,7 @@ git push -u origin feature/post-pin-ui
 | 主后端 API | 8080 | campus_wall |
 | 用户端前端 Dev Server | 5173 | campus-wall-frontend |
 | 管理后台 Dev Server | 5174 | campus-wall-monitor-ui |
-| GraphRAG API | 8001 | campus-wall-graphrag |
+| AI 服务 API | 8011 | campus-wall-ai（原 GraphRAG :8001 已并入/下线） |
 | 告警适配器 | 8002 | campus-wall-alert-adapter |
 | MySQL | 3306 | campus-wall-ops |
 | Redis | 6379 | campus-wall-ops |
@@ -1669,7 +1669,7 @@ feat(page/home): 首页帖子列表支持置顶展示
 └── 第一个任务：修改一个页面样式或增加一个展示字段
 
 第 4 步：了解其他模块（按需，1-2 天）
-├── 按你的任务分配到 campus-wall-graphrag / data-pipeline / alert-adapter
+├── 按你的任务分配到 campus-wall-ai / data-pipeline / alert-adapter
 └── 阅读对应仓库的 README.md 和 CLAUDE.md
 ```
 
@@ -2127,7 +2127,7 @@ git remote set-url origin git@github.com:your-org/campus_wall.git
 
 ```bash
 # 执行 git status，看到不该出现在这个仓库的文件
-# 比如在 campus-wall-graphrag 目录下看到了 Java 文件
+# 比如在 campus-wall-ai 目录下看到了 Java 文件
 
 # 执行 git remote -v，发现 origin 指向你没想到的仓库
 ```

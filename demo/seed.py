@@ -10,7 +10,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-BASE = os.environ.get("GRAPHRAG_BASE", "http://localhost:8001")
+BASE = os.environ.get("GRAPHRAG_BASE", "http://localhost:8011")
 SEED_FILE = Path(__file__).resolve().parent / "seed-knowledge.json"
 
 

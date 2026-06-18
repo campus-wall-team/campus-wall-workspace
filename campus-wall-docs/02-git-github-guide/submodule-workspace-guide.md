@@ -29,7 +29,7 @@ campus-wall-workspace/          ← 你克隆下来的根目录（根仓库）
 │
 ├── campus-wall-frontend/       ← Submodule（微信小程序前端）
 ├── campus_wall/                ← Submodule（Java 主后端）
-├── campus-wall-graphrag/       ← Submodule（AI 问答服务）
+├── campus-wall-ai/             ← Submodule（AI 问答服务；原 campus-wall-graphrag 已并入，端口 8011）
 ├── campus-wall-data-pipeline/  ← Submodule（数据管道）
 ├── campus-wall-alert-adapter/  ← Submodule（告警推送）
 ├── campus-wall-monitor-ui/     ← Submodule（监控后台）

@@ -19,11 +19,11 @@ check_port() {
 check_port 3306 "MySQL"
 check_port 6379 "Redis"
 check_port 9000 "MinIO"
-check_port 8001 "GraphRAG"
+check_port 8011 "campus-wall-ai"
 
 echo ""
-printf "  GraphRAG 健康检查: "
-H=$(curl -s --noproxy '*' --max-time 5 "http://$SERVER:8001/health" 2>/dev/null)
+printf "  campus-wall-ai 健康检查: "
+H=$(curl -s --noproxy '*' --max-time 5 "http://$SERVER:8011/health" 2>/dev/null)
 [ -n "$H" ] && echo "$H" || { echo "无响应"; bad=$((bad+1)); }
 
 echo ""

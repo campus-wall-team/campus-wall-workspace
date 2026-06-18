@@ -12,7 +12,7 @@
 发帖 → PostController /publish → PostPublishService(@Transactional)
    └─ afterCommit:图片 move 到正式路径后
         └─ @Async PostAiIngestService.ingestPostAsync(post)
-             └─ GraphRagBackend.ingestPost(...)  → POST graphrag /ingest-post
+             └─ GraphRagBackend.ingestPost(...)  → POST campus-wall-ai /ingest-post
                   ├─ 对每张图 describe_image(VLM)  ← 06
                   ├─ 融合 + scrub_text 脱敏        ← 06
                   ├─ embed_one(description)        ← 本地 bge-m3·本地优先(同模型云端降级)
@@ -31,10 +31,10 @@
 | `_delete_doc_tx` 幂等删除 | `graph_store.py:152-165` | `_delete_post_tx` 仿此 |
 | `embed_one()`(本地优先+降级) | `llm.py` | Item 向量化(本地 bge-m3;⚠️ 降级须同模型) |
 | `describe_image()` / `scrub_text()` | `06` 新增 | 读图 + 脱敏 |
-| graphrag HTTP 代理 + `postForMap` | `campus_wall/.../ai/service/rag/GraphRagBackend.java`(现有 `query/index/...`) | 加 `ingestPost` |
-| `graphrag.base-url` 配置 | `application-dev.yaml`(默认 `:8001`) | Java 调 graphrag |
+| AI 服务 HTTP 代理 + `postForMap` | `campus_wall/.../ai/service/rag/GraphRagBackend.java`(现有 `query/index/...`) | 加 `ingestPost` |
+| `graphrag.base-url` 配置 | `application-dev.yaml`(默认 `:8011`，原 `:8001` 已下线) | Java 调 AI 服务(campus-wall-ai，原 graphrag 已并入) |
 | 发帖事务 + `afterCommit` 移图钩子 | `community/service/impl/PostPublishService.java`(`movePostImagesAsync`) | 在移图后挂入库 |
-| 图片公开代理 | `admin/.../FileController` `GET /api/v1/files/view`(在 `AuthPathConstants.PUBLIC_PATHS`,免 JWT) | graphrag 取图 |
+| 图片公开代理 | `admin/.../FileController` `GET /api/v1/files/view`(在 `AuthPathConstants.PUBLIC_PATHS`,免 JWT) | AI 服务取图 |
 | objectName→URL | `common/util/MinioUtil.getFileUrl` | 拼图片地址 |
 | 启动类 | `CampusWallBackendApplication`(`@EnableScheduling`) | 补 `@EnableAsync` |
 | 定时任务范式 | `task/FileCleanupTask`(`@Scheduled`) | 入库失败补偿任务 |
@@ -193,7 +193,7 @@ public void ingestPostAsync(Post post, List<String> imageObjectNames) {
     String intent = resolveIntent(post);                  // 见 3.6
     String text   = EmojiUtil.decode(post.getContent());  // 复用现有
     List<String> tags = splitTags(post.getAiTags());
-    // 只传 object_name,graphrag 侧拼 /files/view URL;contact 不传(隐私)
+    // 只传 object_name,AI 服务(campus-wall-ai)侧拼 /files/view URL;contact 不传(隐私)
     for (int attempt = 1; attempt <= 3; attempt++) {
         try {
             ragBackend.ingestPost(post.getId(), intent, post.getCategory(),
@@ -246,14 +246,14 @@ public Map<String,Object> ingestPost(Long postId, String intent, String category
 
 | 变量 | 默认 | 位置 | 说明 |
 |------|------|------|------|
-| `POST_VECTOR_INDEX_NAME` | `campus_post_vector` | graphrag `config.py` | Item 向量索引名 |
-| `BACKEND_BASE_URL` | `http://host.docker.internal:8080` | graphrag `config.py` | graphrag 取图时拼 `/files/view` 的 Java 后端地址 |
+| `POST_VECTOR_INDEX_NAME` | `campus_post_vector` | AI 服务 `config.py` | Item 向量索引名 |
+| `BACKEND_BASE_URL` | `http://host.docker.internal:8080` | AI 服务 `config.py` | AI 服务取图时拼 `/files/view` 的 Java 后端地址 |
 
 > VLM 相关变量见 [`06` 第四节](./06-AI视觉模型与图片标注.md#四配置变更)。
 
 ## 五、改动清单
 
-### graphrag(`campus-wall-graphrag`)
+### AI 服务(`campus-wall-ai`，原 `campus-wall-graphrag` 已并入，端口 8011)
 | 文件 | 改动 |
 |------|------|
 | `app/config.py` | 加 `POST_VECTOR_INDEX_NAME`、`BACKEND_BASE_URL` |
@@ -273,7 +273,7 @@ public Map<String,Object> ingestPost(Long postId, String intent, String category
 
 ## 六、实现步骤
 
-1. graphrag:`config` 加变量 → `graph_store` 加 schema/`ingest_post` → `main` 加端点;`curl` 测 `/ingest-post`。
+1. AI 服务(campus-wall-ai):`config` 加变量 → `graph_store` 加 schema/`ingest_post` → `main` 加端点;`curl` 测 `/ingest-post`。
 2. Java:`@EnableAsync` + `AsyncConfig` + `GraphRagBackend.ingestPost` + `PostAiIngestService`。
 3. 在 `PostPublishService` 移图后挂入库调用。
 4. 联调:发一条带图二手帖 → 确认 Neo4j 出现 `Post`/`Item` 节点 + 向量;关闭 VLM 时仅文字入库不报错。
@@ -285,15 +285,15 @@ public Map<String,Object> ingestPost(Long postId, String intent, String category
 - [ ] 有图有文:`Item.description` 比用户原文更丰富(含图片识别的额外特征)。
 - [ ] 有图无文:`Item.description` 为 VLM 纯图描述。
 - [ ] `Post` 带正确 `intent`/`category`,并连到 `Intent`/`Category`/`Tag` 节点。
-- [ ] 入库为异步,**不阻塞**发帖响应;graphrag 不可用时发帖仍成功,失败进补偿。
+- [ ] 入库为异步,**不阻塞**发帖响应;AI 服务不可用时发帖仍成功,失败进补偿。
 - [ ] `Item.description` 不含明文手机号/微信号(脱敏生效)。
 - [ ] 重复对同一帖入库(编辑/重试)不产生重复 `Item`(幂等)。
 
 ## 八、风险与待确认项
 
-1. **取图地址连通**:graphrag 容器经 `BACKEND_BASE_URL`(`host.docker.internal:8080`)访问 `/files/view`;需联调确认容器→宿主机 8080 可达(docker-compose `extra_hosts` 已配)。
+1. **取图地址连通**:AI 服务容器经 `BACKEND_BASE_URL`(`host.docker.internal:8080`)访问 `/files/view`;需联调确认容器→宿主机 8080 可达(docker-compose `extra_hosts` 已配)。
 2. **图片 move 时序**:AI 入库必须在图片 move 完成、`imagesJson` 为正式路径后触发;若现有 `movePostImagesAsync` 自身异步,需把入库串在其完成回调,避免取到临时/失效 objectName。
-3. **联系方式不入图谱**:`contact` 字段**不传** graphrag;graphrag 再用 `scrub_text` 兜底。用户联系走帖子详情页站内私信(见 `08`)。
+3. **联系方式不入图谱**:`contact` 字段**不传** AI 服务;AI 服务再用 `scrub_text` 兜底。用户联系走帖子详情页站内私信(见 `08`)。
 4. **匿名帖**:`Post` 节点只存 `postId`,不落 `user_id` 明文;"找作者"由 Java 侧用 postId 反查。
 5. **编辑/删除同步**:帖子被删除/隐藏时需同步删除/标记 `Post` 节点(可在删帖逻辑加 `deletePost` 调用,或补偿任务对账),否则会推荐到已删帖。
 6. **Embedding 本地优先 + 降级硬约束**:`embed_one` 已是本地优先(失败自动降级,见 graphrag `llm.py` 的 `_with_fallback`),但 **embedding 降级目标必须是同一个 bge-m3(1024 维)** —— 入库与查询向量须同模型,否则 Neo4j 向量空间不兼容、检索失效。故 `EMBED_FALLBACK_ENABLED` 默认关闭(详见 [`09`](./09-本地大模型部署与降级.md))。

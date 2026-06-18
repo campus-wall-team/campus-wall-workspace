@@ -63,7 +63,7 @@ minio:
   secret-key: $(yq "$MINIO_SK")
   bucket-name: campus-wall
 graphrag:
-  base-url: http://$SERVER_IP:8001
+  base-url: http://$SERVER_IP:8011
 app:
   base-url: $APP_BASE
 YAML
