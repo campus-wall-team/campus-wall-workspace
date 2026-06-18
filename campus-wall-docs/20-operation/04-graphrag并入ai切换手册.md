@@ -14,7 +14,7 @@ cp ai-service/.env.example ai-service/.env
 ```
 
 填入真实值（关键项）：
-- `NEO4J_PASSWORD` = ops `.env` 的同值（默认 `Wfx200399`）——**不一致会连不上**
+- `NEO4J_PASSWORD` = ops `.env` 的同值（真实值见各机 `.env`，勿写入文档/勿提交）——**不一致会连不上**
 - `REDIS_URL` 里的密码 = ops `REDIS_PASSWORD`
 - `DB_URL` = `mysql+pymysql://<user>:<pass>@localhost:3306/campus_wall?charset=utf8mb4` —— **必须 MySQL，不能用默认 sqlite**，否则草稿/记忆不与 Java 共库
 - `JWT_SECRET` = campus_wall 的同值（Base64）
