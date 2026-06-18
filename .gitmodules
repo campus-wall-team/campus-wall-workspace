@@ -1,18 +1,24 @@
 [submodule "campus-wall-data-pipeline"]
 	path = campus-wall-data-pipeline
 	url = https://github.com/campus-wall-team/campus-wall-data-pipeline.git
+	branch = main
 [submodule "campus-wall-frontend"]
 	path = campus-wall-frontend
 	url = https://github.com/campus-wall-team/campus-wall-frontend.git
+	branch = main
 [submodule "campus-wall-monitor-ui"]
 	path = campus-wall-monitor-ui
 	url = https://github.com/campus-wall-team/campus-wall-monitor-ui.git
+	branch = main
 [submodule "campus-wall-ops"]
 	path = campus-wall-ops
 	url = https://github.com/campus-wall-team/campus-wall-ops.git
+	branch = main
 [submodule "campus_wall"]
 	path = campus_wall
 	url = https://github.com/campus-wall-team/campus_wall.git
+	branch = main
 [submodule "campus-wall-ai"]
 	path = campus-wall-ai
 	url = https://github.com/campus-wall-team/campus-wall-ai.git
+	branch = main
