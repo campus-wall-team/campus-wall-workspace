@@ -1,6 +1,3 @@
-[submodule "campus-wall-alert-adapter"]
-	path = campus-wall-alert-adapter
-	url = https://github.com/campus-wall-team/campus-wall-alert-adapter.git
 [submodule "campus-wall-data-pipeline"]
 	path = campus-wall-data-pipeline
 	url = https://github.com/campus-wall-team/campus-wall-data-pipeline.git
