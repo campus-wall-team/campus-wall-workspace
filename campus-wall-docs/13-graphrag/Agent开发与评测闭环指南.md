@@ -209,6 +209,83 @@ intent.jsonl → BEFORE 95.0% → 收紧 planner → AFTER 100.0% → 写回 bas
 
 ---
 
+## 9. 进阶答疑（环境隔离 / 数据同步 / 微调 / 代码位置）
+
+### 9.1 要不要专门的测试数据库？开发/测试/生产三套环境？
+
+**要，你的直觉对。** 标准是三套环境，互不污染：
+
+| 环境 | 用途 | 数据 |
+|---|---|---|
+| **dev** 开发 | 本地随便改/造数据 | 假数据，可随时清 |
+| **test/staging** 测试 | 跑评测、自动化测试、上线前验证 | 专门、干净、可复现的金标数据 |
+| **prod** 生产 | 真实用户 | 真实数据，**绝不能混入测试数据** |
+
+**本项目怎么做的（已落地）**：Neo4j 是**社区版只能单库**，所以给 test 环境**另起一个独立 Neo4j 容器**：
+```bash
+docker run -d --name campus-neo4j-test -p 7689:7687 -p 7690:7474 \
+  -e NEO4J_AUTH=neo4j/testpass123 -v campus-neo4j-test-data:/data neo4j:5.26
+```
+- 配置用三套 env 模板隔离：`.env.dev.example` / `.env.test.example` / `.env.prod.example`（隔离点=不同 Neo4j 实例/库 + 不同 Redis DB 号 + 不同 MySQL schema）。
+- 代码加了 `NEO4J_DATABASE` 旋钮：社区版留空（单库），将来上 Enterprise/Aura 可按环境分库。
+- **评测只跑在 test 实例**：`set -a; source .env.test; set +a; python -m evals.run`——锚定帖只进 test，永远不会被真实用户搜到。
+
+> 反面教材（本项目真实发生过）：评测锚定帖一度被直接插进了**共享 dev Neo4j**——也就是线上 AI 服务正在查询的库。后果：真实用户搜索时可能搜到这些造的测试帖。**这正是为什么要环境隔离。** 现已清理并迁到独立 test 实例。
+
+### 9.2 只往 Neo4j 插数据、没插 MySQL，会数据不同步吗？
+
+**会，而且这是个很重要的点。** 校园墙的帖子是**双写**的：
+
+```
+用户发帖 → /api/v1/posts/publish (Java)
+            ├─ 写 MySQL posts 表（权威数据：id/作者/状态/可见性）
+            └─ 触发 PostAiIngestService → 调 AI /ingest-post → 写 Neo4j（Post/Item + bge-m3 向量，供检索）
+```
+- **MySQL 是权威源**（谁发的、删没删、可不可见）；**Neo4j 是检索副本**（向量语义搜索）。
+- 我（评测时）只调了 `ingest_post` 写 Neo4j、**没写 MySQL** → 产生了「Neo4j 有、MySQL 没有」的**孤儿数据**。
+
+**真实影响（有意思的一点）**：agent 找帖时，`search_posts` 拿到 Neo4j 候选后，会走 **`post_hydrator` 回调 Java** 按 MySQL 做可见性过滤（`app/agent/hydrator.py`）。**MySQL 里没有的帖子会被 Java 判为「不存在」直接丢弃**——所以这些只在 Neo4j 的孤儿帖，**在真实 agent 路径里根本不会展示给用户**。
+- 这也解释了：我的评测能查到锚定帖（因为 `eval_post_search` 直接调 `match_posts`+`judge`，**绕过了 hydrator**），但真实 agent 不会。
+- **正确做法**：测试数据要么走完整发帖流程（双写一致），要么用**独立 test 环境**整套自洽（test 的评测绕过 hydrator，只需 test Neo4j 一致即可）——本项目选了后者。
+
+### 9.3 金标集对每个模型都一样吗？换模型要重新优化吗？
+
+- **金标集本身与模型无关**：它是「标准答案」，不随模型变。**换模型，金标集照用，不重做。**
+- **但「测出的分数」和「最优 prompt」是模型相关的**：同一份金标，35B 测 100%，换 7B 可能 85%；为 35B 调好的 prompt 换模型后可能要重调。
+- 所以：**金标集 = 固定的尺子；换模型 = 拿同一把尺子重新量**，立刻知道新模型好了还是坏了。这正是金标集在「换模型/降本」决策里的最大价值。
+
+### 9.4 训练集是用来微调的吗？我的 agent 要微调吗？
+
+- **训练集 = 喂模型「学」的数据（微调用），模型见过；金标集 = 考模型的，模型没见过。** 两者完全不同。
+- **你的 agent 不需要微调，也强烈建议别碰。** 你是在**用** 35B（prompt + RAG 调用），不是**训练**它。能提升效果的杠杆是 **prompt 工程 + 检索质量 + 评测闭环**——零成本、几分钟一轮（95%→100% 就是例子）。
+- 微调要几千条标注、GPU、防过拟合、改一版几小时～几天，对校园项目性价比极低。**只有 prompt 怎么调都达不到、且有大量领域数据、且要压成本/延迟时才考虑**——你远没到。
+- 一句话：**99% 的 agent 开发不需要微调，靠 prompt+RAG+评测就够。**
+
+### 9.5 我的「接地与防幻觉」「可观测性」在哪段代码？
+
+**接地与防幻觉**（你项目最硬核的部分）：
+
+| 机制 | 位置 | 作用 |
+|---|---|---|
+| 相关性判定闸 | `app/agent/relevance.py` | LLM 只挑真正相关的帖(宁缺毋滥)，把无关帖挡外面 |
+| fruitful 闸门 | `app/agent/nodes.py` `gate()` | 检索 0 命中不准拿空证据编答案，触发重规划 |
+| 严格接地提示词 | `app/agent/prompts.py` `SYNTHESIZER_SYS` | "只依据检索证据，没有的绝不编造" |
+| 找不到就说找不到 | `app/agent/tools.py` `search_posts` | 判定后为空 → 明确"未找到" |
+| 知识问答接地 | `app/graphrag/qa.py` `ANSWER_SYS` | 资料不足就说"暂无相关校园信息" |
+
+量化它好不好：评测里的 `judge_f1`、`must_not_shown=0`、`knowledge_qa.refusal_rate` 就是在测「防幻觉到底防得怎么样」。
+
+**可观测性**：
+
+| | 位置 |
+|---|---|
+| 指标定义 | `app/metrics.py`（LLM 调用数/耗时/单槽排队、整轮耗时、replan、超时、缓存命中、工具命中） |
+| 暴露端点 | `app/main.py` `GET /metrics`（Prometheus 文本格式） |
+| 埋点位置 | `llm.py`(role 标签)、`nodes.py`(replan/timeout)、`tools.py`、`service.py`(整轮) |
+| 看板 | ops Prometheus 抓 `:8011/metrics` → Grafana |
+
+---
+
 ## 附：本项目评测相关文件速查
 
 | 文件 | 作用 |
