@@ -37,6 +37,7 @@
 | [数据库规范](01-development-standards/03-数据库规范.md) | 表/字段/索引命名、字段设计、Flyway迁移、SQL规范 |
 | [全栈开发流程与三环境切换](01-development-standards/全栈开发流程与三环境切换.md) | dev/test/prod 三环境隔离、AI(APP_ENV)与 Java(Spring profiles)切环境、连通性自检 |
 | [团队开发流程指南](01-development-standards/团队开发流程指南.md) | 小白友好的团队协作流程：分支、PR、多仓提交、dev/test/prod 约定 |
+| [B机新手手把手（配置+开发+测试）](01-development-standards/B机新手手把手（配置+开发+测试）.md) | 零基础逐步操作：B机配 dev 环境、IDEA 跑后端、VSCode 跑前端/后台、切 test、排错表 |
 
 ### Git & GitHub 协作指南
 
