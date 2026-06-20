@@ -180,18 +180,21 @@ Authorization: Bearer <token>
 
 ### AI 相关 (/api/v1/ai-senior · /api/v1/ai-preference)
 
-AI 问答已收口为**单一 agent 入口**（轻量 Planner-Executor，内部编排意图识别 / 检索工具 / 反幻觉判定 / 接地合成），前端不再分散调用多个对话端点；对话历史与知识库挂在 `/ai-senior/*`，AI 偏好挂在 `/ai-preference/*`。
+AI 问答/找帖已收口为**单一 agent 入口**（轻量 Planner-Executor，内部编排意图识别 / 检索工具 / 反幻觉判定 / 接地合成），前端不再分散调用多个对话端点；**对话内联 AI 发帖**走一组独立的草稿流端点（draft → resume → 丢弃，中断式人审）。对话历史与知识库挂在 `/ai-senior/*`，AI 偏好挂在 `/ai-preference/*`。Java 侧 `AgentController` 把推理转发到 Python 服务 `campus-wall-ai`（带签发用户 JWT），`ai.agent.remote-enabled=false` 时回退进程内 agent。
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|------|
-| POST | `/ai-senior/agent` | AI 对话（唯一入口，返回 answer + 匹配帖子卡片 + plan 调试 + conversationId）| 是 |
+| POST | `/ai-senior/agent` | AI 对话（问答/找帖唯一入口，返回 answer + 匹配帖子卡片 + plan 调试 + conversationId；**可附 `images`（MinIO object name 数组），后端 VLM「看图说话」转文本并入检索**）| 是 |
+| POST | `/ai-senior/posts/draft` | AI 发帖·出草稿（文本 + 已上传图片 → VLM 理解 → 生成草稿后中断，返回 `{draftId, draft, status}`）| 是 |
+| POST | `/ai-senior/posts/resume/{draftId}` | AI 发帖·续接（`{action:"edit\|publish\|cancel", patch}`；publish 时由 Python 回调 Java `/posts/publish` 真正落帖，复用审核/限流）| 是 |
+| DELETE | `/ai-senior/posts/draft/{draftId}` | AI 发帖·丢弃草稿 | 是 |
 | GET | `/ai-senior/history/list` | 对话历史列表 | 是 |
 | GET | `/ai-senior/history/detail` | 对话历史详情 | 是 |
 | GET | `/ai-preference/get` | AI 偏好设置 | 是 |
 | POST | `/ai-preference/save` | 更新偏好 | 是 |
 | GET | `/ai-preference/system-prompt` | 个性化系统提示词 | 是 |
 
-> ⚠️ 旧端点 `/api/v1/ai/chat`、`/ai-senior/chat`、`/chat/stream` 及后端侧 `/match-posts` 已下线。`userId` 由 JWT（`@RequestAttribute("userId")`）注入，不再从请求体读取。
+> ⚠️ 旧端点 `/api/v1/ai/chat`、`/ai-senior/chat`、`/chat/stream` 及后端侧 `/match-posts` 已下线。`userId` 由 JWT（`@RequestAttribute("userId")`）注入，不再从请求体读取。AI 发帖代发以**转发的用户 JWT** 为身份，多机开发靠请求头 `X-Backend-Base` + 内网白名单指定回调哪台后端。
 
 ### 管理后台 (/api/v1/admin)
 
