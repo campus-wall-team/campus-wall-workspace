@@ -42,6 +42,8 @@ campus-wall-workspace/          ← 你克隆下来的根目录（根仓库）
 - 如果有远程地址 → 这是一个独立的仓库（Submodule）
 - 如果报错 "not a git repository" → 这是根仓库的直接目录（如 docs）
 
+> **分支约定（务必区分）**：**根仓库的默认分支是 `master`**，6 个子模块的默认分支都是 `main`（见 `.gitmodules` 中各 `branch = main`）。所以本文凡是"在根目录推送"的命令用 `git push origin master`，凡是"在子项目里拉取/推送"的命令用 `main`，切勿混淆。
+
 ---
 
 ## 三、第一次加入团队：如何克隆项目？
@@ -108,7 +110,7 @@ cd campus-wall-docs
 cd ..
 git add campus-wall-docs/
 git commit -m "docs: 更新 API 接口文档"
-git push origin main
+git push origin master   # 根仓库默认分支为 master（子模块才是 main）
 ```
 
 > 根仓库的提交只记录：文档变更、README 变更、以及各 Submodule 指向哪个版本。
@@ -127,7 +129,7 @@ git submodule update --remote campus_wall
 # 然后锁定新版本到根仓库
 git add campus_wall
 git commit -m "chore: 更新 campus_wall 到最新版"
-git push origin main
+git push origin master   # 根仓库默认分支为 master
 ```
 
 ### 4.4 查看子项目当前指向的版本
@@ -236,7 +238,7 @@ git filter-repo --path .env --invert-paths
    # → GitHub 提 PR → Code Review → 合并
 
 3. 同步最新代码
-   git pull origin main                # 在子项目里拉取最新
+   git pull origin main                # 在子项目里拉取最新（子模块默认分支是 main）
    或
    git submodule update --remote       # 在根目录更新所有子项目
 
@@ -244,7 +246,7 @@ git filter-repo --path .env --invert-paths
    cd ..
    git add campus_wall
    git commit -m "chore: bump campus_wall"
-   git push origin main
+   git push origin master              # 根仓库默认分支是 master
 ```
 
 ---

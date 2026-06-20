@@ -1024,7 +1024,7 @@ update
 | `utils` | 工具函数 |
 | `style` | 样式/主题 |
 
-#### Python 仓库（campus-wall-ai / data-pipeline / alert-adapter）
+#### Python 仓库（campus-wall-ai / data-pipeline / ops 下的 alert-adapter）
 
 | Scope | 说明 |
 |-------|------|
@@ -1598,13 +1598,14 @@ git push -u origin feature/post-pin-ui
 | 用户端前端 Dev Server | 5173 | campus-wall-frontend |
 | 管理后台 Dev Server | 5174 | campus-wall-monitor-ui |
 | AI 服务 API | 8011 | campus-wall-ai（原 GraphRAG :8001 已并入/下线） |
-| 告警适配器 | 8002 | campus-wall-ops（alert-adapter，原 campus-wall-alert-adapter 已并入） |
+| 告警适配器 | 9094 | campus-wall-ops（alert-adapter，原 campus-wall-alert-adapter 已并入） |
 | MySQL | 3306 | campus-wall-ops |
 | Redis | 6379 | campus-wall-ops |
 | MinIO API | 9000 | campus-wall-ops |
 | MinIO Console | 9001 | campus-wall-ops |
-| Neo4j HTTP | 7475 | campus-wall-ops |
-| Neo4j Bolt | 7688 | campus-wall-ops |
+| Neo4j prod HTTP / Bolt | 7475 / 7688 | campus-wall-ops（campus-neo4j） |
+| Neo4j test HTTP / Bolt | 7690 / 7689 | campus-wall-ops（campus-neo4j-test，全队评测共享） |
+| Neo4j dev HTTP / Bolt | 7692 / 7691 | campus-wall-ops（campus-neo4j-dev，开发共享） |
 | Prometheus | 9090 | campus-wall-ops |
 | Grafana | 3000 | campus-wall-ops |
 | Alertmanager | 9093 | campus-wall-ops |

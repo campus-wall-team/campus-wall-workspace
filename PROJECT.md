@@ -89,7 +89,7 @@ Campus Wall（校园墙）是一个面向高校学生的**匿名社交与信息�
   - campus-wall-ai demo（`demo/run-graphrag.sh` → `:8011`，本地直跑，见 §6）
 - **Docker Compose 编排**（`campus-wall-ops`）：MySQL、Redis、MinIO、Neo4j、Prometheus、Grafana、Alertmanager、各 exporter、alert-adapter、monitor-ui(nginx)。
 - 容器访问宿主机服务统一用 `host.docker.internal`（如 nginx 代理 `/api` → `host.docker.internal:8080`，campus-wall-ai 连 Ollama）。
-- 为避开宿主机已占用端口，Neo4j 对外映射为 **7475(HTTP) / 7688(Bolt)**（容器内仍是 7474/7687）。
+- 为避开宿主机已占用端口，Neo4j 对外映射为 **7475(HTTP) / 7688(Bolt)**（容器内仍是 7474/7687）；环境隔离另起 test/dev 两实例（Bolt **7689 / 7691**，社区版单库故按实例隔离）。
 
 ### 2.3 关键数据流
 
@@ -244,7 +244,7 @@ Vue 3.5 + Element Plus 桌面 SPA，**约 12 个权限驱动菜单页 + 403**：
 
 Docker Compose 统一编排所有基础设施与监控栈。
 
-- **主编排** `docker-compose.yml`：数据层（mysql/redis/minio/neo4j）、应用层（campus-wall-ai api + 记忆 worker，`network_mode: host`）、监控采集（prometheus/node-exporter/redis-exporter/mysqld-exporter/blackbox-exporter）、可视化告警（grafana/alertmanager/alert-adapter）、展示层（monitor-ui nginx）。**15 个活跃服务**（cadvisor 整段注释，国内拉取失败）。
+- **主编排** `docker-compose.yml`：数据层（mysql/redis/minio/neo4j + 环境隔离用 neo4j-dev/neo4j-test，均 `restart: unless-stopped`）、应用层（campus-wall-ai api + 记忆 worker，`network_mode: host`）、监控采集（prometheus/node-exporter/redis-exporter/mysqld-exporter/blackbox-exporter）、可视化告警（grafana/alertmanager/alert-adapter）、展示层（monitor-ui nginx）。**17 个活跃服务**（cadvisor 整段注释，国内拉取失败）。
 - campus-wall-ai 服务：`build.context = ../campus-wall-ai`（含 Dockerfile + app 代码）、`image: campus-wall-ai:2.0.0`、`network_mode: host`（host 网络下用 localhost 直达 Ollama/后端、局域网直连内网 LLM），端口由 `AI_SERVICE_PORT` 决定（默认 **8011**），env 含 `NEO4J_URI=bolt://localhost:7688`、`BACKEND_BASE_URL=http://localhost:8080`、VLM_*、POST_VECTOR_INDEX_NAME，CHAT 走内网 Qwen3.6-35B（172.21.160.101:8003）；另起同镜像 `campus-wall-ai-worker` 进程消费 Redis Streams 做异步记忆。`env_file = ./ai-service/.env`（该目录仅存部署侧 `.env`，密钥不入库）。
 - **资源限制覆盖** `docker-compose.override.yml`：按 4 核 8G 服务器分配（总约 5.5GB），如 neo4j 1.5g、mysql 1g、campus-wall-ai/prometheus 各 512m。`docker-compose.demo.yml` 为 demo 精简版。
 - **监控配置** `monitoring/`：Prometheus 抓取（15s，含 `host.docker.internal:8080` 的 Spring Boot `/actuator/prometheus`、blackbox 探针 MinIO/campus-wall-ai/Neo4j）；Grafana 数据源 + 3 个预置看板（business / host-system / jvm-app）；Alertmanager 单 route → `campus-webhook`（`alert-adapter:9094`）；8 条告警规则（ServiceDown、BlackboxProbeFailed、Host CPU/内存/磁盘、JvmHeapHigh、HttpServerErrorRateHigh[severity=**warning**]、ModerationBacklog[指标 `campus_moderation_pending`]）。
@@ -261,7 +261,7 @@ Docker Compose 统一编排所有基础设施与监控栈。
 | **MySQL 8.0** (`campus-mysql`) | 业务主数据库 `campus_wall` | 3306 |
 | **Redis 7.0** (`campus-redis`) | 多级缓存、点赞/收藏/搜索/时间线、会话 | 6379 |
 | **MinIO** (`campus-minio`) | 对象存储（帖子图、头像、聊天文件，bucket `campus-wall`） | 9000(API) / 9001(Console) |
-| **Neo4j 5** (`campus-neo4j`) | GraphRAG 知识图谱 + 原生向量索引（cosine, 1024 维） | 7475(HTTP) / 7688(Bolt) |
+| **Neo4j 5** (`campus-neo4j`) | GraphRAG 知识图谱 + 原生向量索引（cosine, 1024 维）；prod 7688 / test 7689 / dev 7691 三实例隔离 | 7475(HTTP) / 7688(Bolt) |
 
 **MySQL 主要表（当前约 37 张）**：业务核心 `region` `university` `user` `post` `comment` `user_interaction` `user_follow` `topic` `notification` `browse_history` `search_record` `chat_session` `chat_message` `message` `ai_chat_record` `ai_preference` `moderation_log` `feedback` `user_like` `custom_emoji`；板块/排行/认证 `tag` `post_tag` `team_member` `post_campus` `hot_rank_config` `student_verification`；AI 长期记忆 `ai_user_memory`；管理端 RBAC `admin_user` `admin_role` `admin_permission` `admin_user_role` `admin_role_permission`；审计/看板/配置 `admin_oper_log` `stat_daily` `sys_config`。
 
@@ -304,6 +304,8 @@ Docker Compose 统一编排所有基础设施与监控栈。
 > intent 合法值：`lost_found` / `second_hand` / `part_time` / `team_up` / `daily`。
 
 **配置（全部走环境变量，无硬编码 key；端口由 `AI_SERVICE_PORT` 决定，默认 8011）**：`NEO4J_URI`（默认 `bolt://localhost:7688`）`NEO4J_USER` `NEO4J_PASSWORD`；`CHAT_*`（BASE_URL/API_KEY/MODEL/TIMEOUT）+ `CHAT_FALLBACK_*`（ENABLED/BASE_URL/API_KEY/MODEL）；`EMBED_*` + `EMBED_FALLBACK_*` + `EMBED_DIM=1024`；`VECTOR_INDEX_NAME=campus_chunk_vector` + `POST_VECTOR_INDEX_NAME=campus_post_vector`；`VLM_*`（ENABLED/BASE_URL/API_KEY/MODEL=qwen2.5vl:7b/IMAGE_MODE/TIMEOUT）+ `VLM_FALLBACK_*`；`BACKEND_BASE_URL`（拼 `/api/v1/files/view` 取帖子图片）。
+
+**可观测性与评测**：另有 `GET /metrics`（prometheus-client 文本指标，缺包自动降级 no-op）；`evals/` 是离线评测闭环——金标集 `datasets/{intent,post_search,knowledge_qa}.jsonl` + `metrics.py` 纯函数 + `run.py` 对 `baseline.json` 比涨跌，跑法 `APP_ENV=test python -m evals.run`（详见 `13-graphrag/Agent开发与评测闭环指南.md`）。
 
 ### 6.2 本地 Demo 运行（已就绪）
 
@@ -441,9 +443,11 @@ docker compose restart monitor-ui   # 在 ops 目录执行
 
 各子项目的 `.env` **绝不提交**（已被 `.gitignore` 忽略），参考各自 `.env.example`。
 
-**campus_wall（必需）**：`MYSQL_URL` `MYSQL_USER` `MYSQL_PASSWORD`、`REDIS_HOST` `REDIS_PORT` `REDIS_PASSWORD`、`DASHSCOPE_API_KEY`、`MINIO_ENDPOINT` `MINIO_ACCESS_KEY` `MINIO_SECRET_KEY`、`WX_APPID` `WX_SECRET`、`ADMIN_USER` `ADMIN_PASS` `ADMIN_USER_ID`。可选：`GRAPHRAG_BASE_URL`(默认 `http://localhost:8011`，配置键名沿用 graphrag.* 减少改动面) `GRAPHRAG_TIMEOUT_MS`(120000) `LLM_MODEL`(qwen-plus) `MINIO_BUCKET`(campus-wall)。
+> **dev/test/prod 三环境隔离（已落地）**：dev 每人一套、test/prod 全队共享。同一份中间件按命名分租——MySQL 多库（`campus_wall` prod / `campus_wall_dev_a` / `campus_wall_dev_b` / `campus_wall_test`）、Redis 逻辑库号（0 prod / 1 dev_a / 2 dev_b / 15 test）、MinIO bucket（`campus-wall` / `campus-dev-a` / `campus-dev-b` / `campus-test`，Java `MinioUtil` 启动自动建）、Neo4j 三实例（prod 7688 / test 7689 / dev 7691）。AI 服务用 `APP_ENV=dev|test|prod`（`config.py` 自动加载 `.env.<env>`，回退 `.env.<env>.example`）；Java 用 `SPRING_PROFILES_ACTIVE` + `application-{dev,test,prod}.yaml`。连通性自检：`deploy/team-dev/check_env.py`（深度，按环境真连库/RedisDB/Neo4j 实例）/ `deploy/team-dev/check-connection.sh`（端口级）。
 
-**campus-wall-ai**（端口 `AI_SERVICE_PORT` 默认 8011）：`NEO4J_URI/USER/PASSWORD`、`CHAT_*` + `CHAT_FALLBACK_*`、`EMBED_*` + `EMBED_FALLBACK_*` + `EMBED_DIM`、`VLM_*` + `VLM_FALLBACK_*`、`VECTOR_INDEX_NAME` + `POST_VECTOR_INDEX_NAME`、`BACKEND_BASE_URL`；v2 另需 `DB_URL`(MySQL ai_* 表)、`REDIS_*`(记忆 streams)、`JWT_SECRET`(验签转发用户 JWT)。详见 `ai-service/.env.example`。
+**campus_wall（必需）**：`MYSQL_URL` `MYSQL_USER` `MYSQL_PASSWORD`、`REDIS_HOST` `REDIS_PORT` `REDIS_PASSWORD`、`DASHSCOPE_API_KEY`、`MINIO_ENDPOINT` `MINIO_ACCESS_KEY` `MINIO_SECRET_KEY`、`WX_APPID` `WX_SECRET`、`ADMIN_USER` `ADMIN_PASS` `ADMIN_USER_ID`。可选：`GRAPHRAG_BASE_URL`(默认 `http://localhost:8011`，配置键名沿用 graphrag.* 减少改动面) `GRAPHRAG_TIMEOUT_MS`(120000) `LLM_MODEL`(qwen-plus) `MINIO_BUCKET`(campus-wall)。切环境用 `SPRING_PROFILES_ACTIVE`（对应 `application-{dev,test,prod}.yaml`）。
+
+**campus-wall-ai**（端口 `AI_SERVICE_PORT` 默认 8011；切环境用 `APP_ENV=dev|test|prod`，模板 `.env.{dev,test,prod}.example`）：`NEO4J_URI/USER/PASSWORD`、`CHAT_*` + `CHAT_FALLBACK_*`、`EMBED_*` + `EMBED_FALLBACK_*` + `EMBED_DIM`、`VLM_*` + `VLM_FALLBACK_*`、`VECTOR_INDEX_NAME` + `POST_VECTOR_INDEX_NAME`、`BACKEND_BASE_URL`；v2 另需 `DB_URL`(MySQL ai_* 表)、`REDIS_*`(记忆 streams)、`JWT_SECRET`(验签转发用户 JWT)、`AGENT_WALL_CLOCK_BUDGET_SECONDS`(全局 timeout 预算，默认 100)。详见 `ai-service/.env.example`。
 
 **data-pipeline**：`CW_MYSQL_*`（HOST/PORT/USER/PASSWORD/DB）、`GRAPHRAG_URL`、`NAME_BLACKLIST_FILE`。
 

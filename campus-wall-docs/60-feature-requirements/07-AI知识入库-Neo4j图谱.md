@@ -26,7 +26,7 @@
 
 | 资产 | 位置 | 复用点 |
 |------|------|--------|
-| `ensure_schema()` 约束 + 向量索引创建写法 | `graphrag/app/graph_store.py:58-74` | 照此加 `Post`/`Item` 约束与 `campus_post_vector` |
+| `ensure_schema()` 约束 + 向量索引创建写法 | `campus-wall-ai/app/graphrag/graph_store.py`(原 `campus-wall-graphrag` 已并入) | 照此加 `Post`/`Item` 约束与 `campus_post_vector` |
 | `index_document` 的 MERGE/删旧重建模式 | `graph_store.py:77-110` | `ingest_post` 仿此 |
 | `_delete_doc_tx` 幂等删除 | `graph_store.py:152-165` | `_delete_post_tx` 仿此 |
 | `embed_one()`(本地优先+降级) | `llm.py` | Item 向量化(本地 bge-m3;⚠️ 降级须同模型) |
@@ -85,7 +85,7 @@ def _image_url(self, img: dict) -> str:
     if img.get("url"):
         return img["url"]
     on = img.get("object_name")
-    return f"{settings.BACKEND_BASE_URL}/api/v1/files/view?objectName={quote(on)}" if on else ""
+    return f"{settings.JAVA_BACKEND_URL}/api/v1/files/view?objectName={quote(on)}" if on else ""
 
 def ingest_post(self, post_id, intent, category, text, images, tags) -> dict:
     # 1. 逐图读图(06),聚合属性与描述
@@ -247,7 +247,7 @@ public Map<String,Object> ingestPost(Long postId, String intent, String category
 | 变量 | 默认 | 位置 | 说明 |
 |------|------|------|------|
 | `POST_VECTOR_INDEX_NAME` | `campus_post_vector` | AI 服务 `config.py` | Item 向量索引名 |
-| `BACKEND_BASE_URL` | `http://host.docker.internal:8080` | AI 服务 `config.py` | AI 服务取图时拼 `/files/view` 的 Java 后端地址 |
+| `JAVA_BACKEND_URL` | `http://localhost:8080` | AI 服务 `config.py` | AI 服务取图时拼 `/files/view` 的 Java 后端地址(host 网络部署；跨机时由 `JAVA_BACKEND_URL`/请求头 `X-Backend-Base` 指定) |
 
 > VLM 相关变量见 [`06` 第四节](./06-AI视觉模型与图片标注.md#四配置变更)。
 
@@ -256,7 +256,7 @@ public Map<String,Object> ingestPost(Long postId, String intent, String category
 ### AI 服务(`campus-wall-ai`，原 `campus-wall-graphrag` 已并入，端口 8011)
 | 文件 | 改动 |
 |------|------|
-| `app/config.py` | 加 `POST_VECTOR_INDEX_NAME`、`BACKEND_BASE_URL` |
+| `app/config.py` | 加 `POST_VECTOR_INDEX_NAME`、`JAVA_BACKEND_URL` |
 | `app/graph_store.py` | `ensure_schema` 加 Post/Item 约束 + `campus_post_vector`;新增 `ingest_post`、`_delete_post_tx`、`_image_url` |
 | `app/main.py` | 加 `PostImage`/`IngestPostRequest`/`IngestPostResponse` + `POST /ingest-post` |
 
@@ -291,7 +291,7 @@ public Map<String,Object> ingestPost(Long postId, String intent, String category
 
 ## 八、风险与待确认项
 
-1. **取图地址连通**:AI 服务容器经 `BACKEND_BASE_URL`(`host.docker.internal:8080`)访问 `/files/view`;需联调确认容器→宿主机 8080 可达(docker-compose `extra_hosts` 已配)。
+1. **取图地址连通**:AI 服务经 `JAVA_BACKEND_URL`(host 网络部署,默认 `localhost:8080`)访问 `/files/view`。AI 服务与 Java 后端跨机时,由 `JAVA_BACKEND_URL` 或代发帖请求头 `X-Backend-Base` 指定回调哪台后端;后者须经 `config.py` 的 `BACKEND_ALLOWLIST` 白名单(精确 host 或 CIDR 网段)校验,防 SSRF。
 2. **图片 move 时序**:AI 入库必须在图片 move 完成、`imagesJson` 为正式路径后触发;若现有 `movePostImagesAsync` 自身异步,需把入库串在其完成回调,避免取到临时/失效 objectName。
 3. **联系方式不入图谱**:`contact` 字段**不传** AI 服务;AI 服务再用 `scrub_text` 兜底。用户联系走帖子详情页站内私信(见 `08`)。
 4. **匿名帖**:`Post` 节点只存 `postId`,不落 `user_id` 明文;"找作者"由 Java 侧用 postId 反查。

@@ -20,15 +20,15 @@
 ```
 ①金标集        ②量基线         ③改一处          ④再量           ⑤固化/回归
 intent.jsonl → BEFORE 95.0% → 收紧 planner → AFTER 100.0% → 写回 baseline
-(60条带标签)   (57/60)        prompt         (60/60)         以后跌5%自动报警
+(80条带标签)   (76/80)        prompt         (80/80)         以后跌5%自动报警
 ```
 
-具体数据（对线上 Qwen3.6-35B 实测，每次约 90 秒跑完 60 条）：
+具体数据（对线上 Qwen3.6-35B 实测，每次约 90 秒跑完 80 条）：
 
 | 阶段 | 总准确率 | knowledge_qa 召回 | 说明 |
 |------|---------|------------------|------|
-| BEFORE | 95.0% (57/60) | 80% (12/15) | 3 个「怎么补办校园卡 / 怎么申请缓考 / 学生证丢了怎么补办」被误判成 `mixed` |
-| AFTER  | **100.0% (60/60)** | **100% (15/15)** | 3 个全修好，**零回归**（其它 57 条一个没改坏） |
+| BEFORE | 95.0% (76/80) | 80% (16/20) | 一批「怎么补办校园卡 / 怎么申请缓考 / 学生证丢了怎么补办」这类流程问被误判成 `mixed` |
+| AFTER  | **100.0% (80/80)** | **100% (20/20)** | 全修好，**零回归**（其它正确条目一个没改坏） |
 
 **改了什么？** 只改了 planner 的一段系统提示词：把「问流程/怎么办理」（有官方标准答案 → 只查知识库）和「明确要经验/攻略/建议」（→ 才同时查知识库+经验帖）**拆开**。一行 prompt 的事，但因为有金标集，我们能**证明**它确实有效、且没把别的搞坏。
 
@@ -77,19 +77,19 @@ intent.jsonl → BEFORE 95.0% → 收紧 planner → AFTER 100.0% → 写回 bas
 | 用途 | 规模（每类 / 总量） | 说明 |
 |------|------|------|
 | 冒烟自测（跑通流程） | 每类 3~5 条 | 我们最早的占位集就是这量级，只验证管道能跑 |
-| **日常迭代对比**（最常用） | **每类 10~20 条 / 总 50~100** | 改 prompt 时 A/B 用，能看出明显涨跌。本项目意图集现在 **60 条（每类 15）** |
+| **日常迭代对比**（最常用） | **每类 10~20 条 / 总 50~100** | 改 prompt 时 A/B 用，能看出明显涨跌。本项目意图集现在 **80 条（每类 20）** |
 | 验收 / 上线门禁 | 每类 30~50 条 / 总 150~300 | 数字够稳，可当 CI 红线 |
 | 出报告 / 论文级 | 每类 100+ / 总 500~1000+ | 置信区间窄，能下「显著提升」结论 |
 
 ### 关键直觉：样本越少，数字越「飘」
-- 22 条时测出 95.5%，60 条时测出 95.0%——**不是退步，是样本变多后更准了**。
-- n=22 的 95% 置信区间约 ±9%（即真实值可能在 86%~100%）；n=60 缩到约 ±5%；n=300 才到 ±2% 左右。
+- 22 条时测出 95.5%，80 条时测出 95.0%——**不是退步，是样本变多后更准了**。
+- n=22 的 95% 置信区间约 ±9%（即真实值可能在 86%~100%）；n=80 缩到约 ±5%；n=300 才到 ±2% 左右。
 - **所以**：拿小样本测出的单个数字别太当真，要么多跑几次取平均（应对 temperature 抖动），要么把集子扩大。
 
 ### 比「多」更重要的是「标得准」+「覆盖边界」
 - 50 条**标注精准、覆盖各种坑**的，胜过 500 条随手标的。
 - 一定要放**负样本/对抗样本**：如「校长私人手机号是多少」（应答"暂无"而不是编造）、「无关帖不该命中」。系统**不犯错**和**会答对**一样重要。
-- 我们这次 60 条特意补了「怎么办理 X」这类**边界样本**，正好暴露并修掉了 prompt 的弱点——这叫**针对性扩集**。
+- 我们这次（后来扩到 80 条）特意补了「怎么办理 X」这类**边界样本**，正好暴露并修掉了 prompt 的弱点——这叫**针对性扩集**。
 
 ---
 
@@ -105,16 +105,18 @@ intent.jsonl → BEFORE 95.0% → 收紧 planner → AFTER 100.0% → 写回 bas
 ### 为什么找帖金标要填「真实 postId」
 找帖评测要算「检索召回的帖子里，有没有命中**应该命中**的那条」。要比对，就得知道「正确答案是哪条帖子」——也就是它的 **postId**。
 
-我们现在 `post_search.jsonl` 里 `expected_post_ids` 是空的占位（`[]`），所以那几个找帖指标还没法算。要让它生效，得：
-1. 在库里挑/造一批锚定帖（比如真造一条「丢了蓝色书包」的帖，记下它的 id）；
+`post_search.jsonl` 里 `expected_post_ids` 现已填好真实锚定帖 `postId`（90001 起，跑在独立 test Neo4j 实例 7689 上），所以找帖指标已经能算了。当初让它生效做了两步：
+1. 在 test 库里造一批锚定帖（`eval_anchor`，如「丢了蓝色书包」一条，记下它的 id）；
 2. 把这个真实 id 填进金标的 `expected_post_ids`。
+
+现在的基线（test 实例实测）：hit/recall@k = 1.0、judge_f1 ≈ 0.93、must_not_shown = 0。
 
 ### 怎么拿到真实 postId
 - 查 MySQL：`SELECT id, category, content FROM posts WHERE ... LIMIT 20;`
 - 或查 Neo4j：`MATCH (p:Post) RETURN p.postId, p.text LIMIT 20;`
 - 或用 `GraphStore.ingest_post(...)` 主动灌一条锚定帖，返回里就有 id。
 
-> 这也是为什么**意图准确率能先做、找帖准确率要等**：意图判定只调一次 35B、不碰库（不需要 postId）；找帖要连真实库、要真实 postId 当答案。
+> 这也是为什么**意图准确率先做、找帖准确率随后也已跑通**（在填好锚定 postId 之后）：意图判定只调一次 35B、不碰库（不需要 postId）；找帖要连真实库、要真实 postId 当答案，所以等独立 test 实例与锚定帖就位后才补上。
 
 ---
 
@@ -135,7 +137,7 @@ intent.jsonl → BEFORE 95.0% → 收紧 planner → AFTER 100.0% → 写回 bas
 - **一次只改一个变量**（prompt 或检索或模型），否则涨跌归因不清。
 - **复测要控制随机性**：LLM 有 temperature，同输入多次输出可能不同。我们这次关掉缓存、跑了 **3 次** AFTER 都是 100% 才敢说「稳定」。
 - **基线（baseline）= 防回归红线**：`evals/baseline.json` 存住当前指标；以后谁改 prompt，跑一遍 `python -m evals.run`，跌超 5% 退出码非 0、自动报警。这就是「闭环」里**防止越改越烂**的那道闸。
-- 本项目跑法：`python -m evals.run --only intent`（只需 35B，~90 秒，不连 Neo4j）。
+- 本项目跑法：`APP_ENV=test python -m evals.run --only intent`（`APP_ENV=test` 让 config.py 自动加载 `.env.test` 切到 test 环境；意图项只需 35B，~90 秒，不连 Neo4j）。
 
 ---
 
@@ -182,7 +184,7 @@ intent.jsonl → BEFORE 95.0% → 收紧 planner → AFTER 100.0% → 写回 bas
 你问「是不是可以写『通过优化 prompt 提高意图准确率』」——**可以，但要等真做完且数字站得住，并写清方法和量化**。
 
 ### ✅ 现在（这次迭代后）你可以诚实地写
-- 「为校园墙 AI agent **搭建了意图分类评测体系**（金标集 + 准确率/混淆矩阵指标 + 基线回归），并通过**优化 planner 提示词**将路由意图准确率从 **95% 提升至 100%**（60 条标注集，对线上 35B 实测、3 次复跑稳定）。」
+- 「为校园墙 AI agent **搭建了意图分类评测体系**（金标集 + 准确率/混淆矩阵指标 + 基线回归），并通过**优化 planner 提示词**将路由意图准确率从 **95% 提升至 100%**（80 条标注集，对线上 35B 实测、3 次复跑稳定）。」
 - 「设计**数据驱动的 prompt 优化闭环**：金标集量化基线 → 假设驱动改一处 → A/B 复测 → 基线防回归，定位并修复了『流程类问题被误判为混合意图』的缺陷。」
 
 为什么这样写站得住：**有金标集、有 before/after 数字、有方法论、有复现命令**——面试官追问你答得上来。
@@ -190,7 +192,7 @@ intent.jsonl → BEFORE 95.0% → 收紧 planner → AFTER 100.0% → 写回 bas
 ### ❌ 别这么写（会被追问到穿帮）
 - 「将意图准确率提升到 99%」——不说基线、不说样本量、不说怎么测，等于没说，且经不起追问。
 - 「优化模型提升准确率」——你没碰模型，碰的是 prompt 和评测。用词要准。
-- 把 60 条小样本的 100% 吹成「生产级 99%+ 准确率」——n=60 的 100% 置信区间仍有 ±几个点，**扩到几百条再下大结论**。
+- 把 80 条小样本的 100% 吹成「生产级 99%+ 准确率」——n=80 的 100% 置信区间仍有 ±几个点，**扩到几百条再下大结论**。
 
 ### 一句话原则
 **简历可写 = 你能在面试白板上复现的**。这次的闭环你完全能复现，所以放心写——但写**方法+量化**，别写光秃秃的结论。
@@ -203,7 +205,7 @@ intent.jsonl → BEFORE 95.0% → 收紧 planner → AFTER 100.0% → 写回 bas
 
 1. **评测**（你正在学）：把金标集扩到每类 30+；学会 precision/recall/F1、混淆矩阵、置信区间的直觉。
 2. **可观测性**：跑起来本项目的 `/metrics` + Grafana，看真实的 LLM 调用次数/耗时直方图，理解「单槽排队」这种真实瓶颈。
-3. **RAG 评测**：等你填好真实 postId，跑通 `post_search` 的 hit_rate/recall 和 `judge_f1`，体会「检索质量」怎么量。
+3. **RAG 评测**：锚定 postId 已填好，`post_search` 的 hit_rate/recall 和 `judge_f1` 已跑通（test 实例 hit/recall=1.0、judge_f1≈0.93），跟着读一遍体会「检索质量」怎么量。
 4. **健壮性工程**：读本项目的全局 timeout（`app/agent/nodes.py` 的 `over_budget`）和缓存（`app/cache.py`），理解生产 agent 怎么防雪崩。
 5. **进阶**：LLM-as-judge（用小模型当裁判自动评 groundedness，本项目 `evals/run.py` 已有）、对抗式评测、A/B 上线。
 
@@ -221,14 +223,21 @@ intent.jsonl → BEFORE 95.0% → 收紧 planner → AFTER 100.0% → 写回 bas
 | **test/staging** 测试 | 跑评测、自动化测试、上线前验证 | 专门、干净、可复现的金标数据 |
 | **prod** 生产 | 真实用户 | 真实数据，**绝不能混入测试数据** |
 
-**本项目怎么做的（已落地）**：Neo4j 是**社区版只能单库**，所以给 test 环境**另起一个独立 Neo4j 容器**：
-```bash
-docker run -d --name campus-neo4j-test -p 7689:7687 -p 7690:7474 \
-  -e NEO4J_AUTH=neo4j/testpass123 -v campus-neo4j-test-data:/data neo4j:5.26
+**本项目怎么做的（已落地）**：Neo4j 是**社区版只能单库**，所以给每套环境**各起一个独立 Neo4j 容器**——已纳入 `campus-wall-ops/docker-compose.yml`（服务 `neo4j-dev` / `neo4j-test`，`restart: unless-stopped`），三实例分端口：**prod 7688 / test 7689 / dev 7691**：
+```yaml
+# campus-wall-ops/docker-compose.yml 摘录
+neo4j-test:
+  image: neo4j:5.26
+  container_name: campus-neo4j-test
+  ports: ["7690:7474", "7689:7687"]   # HTTP / Bolt
+  environment:
+    NEO4J_AUTH: neo4j/${NEO4J_TEST_PASSWORD:-testpass123}
+  volumes: [campus-neo4j-test-data:/data]
+  restart: unless-stopped
 ```
-- 配置用三套 env 模板隔离：`.env.dev.example` / `.env.test.example` / `.env.prod.example`（隔离点=不同 Neo4j 实例/库 + 不同 Redis DB 号 + 不同 MySQL schema）。
+- 配置用三套 env 模板隔离：`.env.dev.example` / `.env.test.example` / `.env.prod.example`（隔离点=不同 Neo4j 实例/库 + 不同 Redis DB 号(0/1·2/15) + 不同 MySQL schema(campus_wall / campus_wall_dev_* / campus_wall_test)）。
 - 代码加了 `NEO4J_DATABASE` 旋钮：社区版留空（单库），将来上 Enterprise/Aura 可按环境分库。
-- **评测只跑在 test 实例**：`set -a; source .env.test; set +a; python -m evals.run`——锚定帖只进 test，永远不会被真实用户搜到。
+- **评测只跑在 test 实例**：`APP_ENV=test python -m evals.run`（团队约定的「一个变量切环境」入口——config.py 据 `APP_ENV` 自动加载 `.env.test`，`.vscode/launch.json` 的「评测 · test」配置即用 `APP_ENV=test`）——锚定帖只进 test，永远不会被真实用户搜到。
 
 > 反面教材（本项目真实发生过）：评测锚定帖一度被直接插进了**共享 dev Neo4j**——也就是线上 AI 服务正在查询的库。后果：真实用户搜索时可能搜到这些造的测试帖。**这正是为什么要环境隔离。** 现已清理并迁到独立 test 实例。
 
@@ -290,8 +299,8 @@ docker run -d --name campus-neo4j-test -p 7689:7687 -p 7690:7474 \
 
 | 文件 | 作用 |
 |------|------|
-| `campus-wall-ai/evals/datasets/intent.jsonl` | 意图金标集（60 条） |
-| `campus-wall-ai/evals/datasets/post_search.jsonl` | 找帖金标（待填真实 postId） |
+| `campus-wall-ai/evals/datasets/intent.jsonl` | 意图金标集（80 条，每类 20） |
+| `campus-wall-ai/evals/datasets/post_search.jsonl` | 找帖金标（已填锚定 postId 90001 起，test 实例） |
 | `campus-wall-ai/evals/datasets/knowledge_qa.jsonl` | 知识问答金标（含对抗样本） |
 | `campus-wall-ai/evals/metrics.py` | 指标纯函数（accuracy/recall/precision/f1/混淆矩阵） |
 | `campus-wall-ai/evals/run.py` | 评测运行器（`python -m evals.run [--only intent]`） |
@@ -302,5 +311,5 @@ docker run -d --name campus-neo4j-test -p 7689:7687 -p 7690:7474 \
 跑一次意图评测：
 ```bash
 cd campus-wall-ai
-python -m evals.run --only intent     # 需能连内网 35B(.101:8003)，约 90 秒
+APP_ENV=test python -m evals.run --only intent     # APP_ENV=test 切到 test 环境；需能连内网 35B(.101:8003)，约 90 秒
 ```

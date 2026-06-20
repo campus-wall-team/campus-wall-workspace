@@ -35,6 +35,8 @@
 | [目录结构规范](01-development-standards/01-目录结构规范.md) | 6个仓库的标准目录结构、新增文件规范 |
 | [API设计规范](01-development-standards/02-API设计规范.md) | RESTful API规范、统一响应格式、分页、认证、错误码、WebSocket |
 | [数据库规范](01-development-standards/03-数据库规范.md) | 表/字段/索引命名、字段设计、Flyway迁移、SQL规范 |
+| [全栈开发流程与三环境切换](01-development-standards/全栈开发流程与三环境切换.md) | dev/test/prod 三环境隔离、AI(APP_ENV)与 Java(Spring profiles)切环境、连通性自检 |
+| [团队开发流程指南](01-development-standards/团队开发流程指南.md) | 小白友好的团队协作流程：分支、PR、多仓提交、dev/test/prod 约定 |
 
 ### Git & GitHub 协作指南
 
@@ -50,7 +52,7 @@
 | campus_wall | [开发文档](10-backend/开发文档.md) | [.claude/CLAUDE.md](../campus_wall/.claude/CLAUDE.md) |
 | campus-wall-frontend | [开发文档](11-frontend/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-frontend/.claude/CLAUDE.md) |
 | campus-wall-monitor-ui | [开发文档](12-monitor-ui/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-monitor-ui/.claude/CLAUDE.md) |
-| campus-wall-ai（原 graphrag） | [开发文档](13-graphrag/开发文档.md) | [README.md](../campus-wall-ai/README.md) |
+| campus-wall-ai（原 graphrag） | [开发文档](13-graphrag/开发文档.md) · [Agent开发与评测闭环指南](13-graphrag/Agent开发与评测闭环指南.md) | [README.md](../campus-wall-ai/README.md) |
 | campus-wall-data-pipeline | [开发文档](14-data-pipeline/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-data-pipeline/.claude/CLAUDE.md) |
 | alert-adapter（并入 campus-wall-ops） | [开发文档](15-alert-adapter/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-ops/alert-adapter/.claude/CLAUDE.md) |
 | campus-wall-ops | [开发文档](16-ops/开发文档.md) | [.claude/CLAUDE.md](../campus-wall-ops/.claude/CLAUDE.md) |
@@ -159,4 +161,4 @@
 
 ---
 
-*本文档体系最后更新：2026-06-15*
+*本文档体系最后更新：2026-06-20*
